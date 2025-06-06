@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useStore } from '../../lib/store'
 import { auth } from '../../lib/supabase'
+import logo from '../../assets/images/logo.png'
 
 export function Login() {
   const navigate = useNavigate()
@@ -41,17 +42,7 @@ export function Login() {
   return (
     <section className='min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900'>
       <div className='flex flex-col items-center justify-center px-6 py-8 w-full sm:max-w-md'>
-        <a
-          href='#'
-          className='flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white'
-        >
-          <img
-            className='w-20 h-20 mr-2'
-            src='src/assets/images/logo.png'
-            alt='logo'
-          />
-          LaPala Club
-        </a>
+        <img src={logo} alt='logo' width={64} height={64} />
         <div className='w-full bg-white rounded-lg shadow dark:border sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700'>
           <div className='p-6 space-y-4 md:space-y-6 sm:p-8'>
             <h1 className='text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white'>
