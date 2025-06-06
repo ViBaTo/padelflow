@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+@import 'flowbite/src/themes/default';
+@import 'flowbite';
+
+/* Tus estilos globales personalizados aquí */
+
+/* Cambiar el color de fondo global */
+body {
+  background-color: #04192f;
+  @apply font-sans;
+}
+
+/* Personalizar el scroll */
+::-webkit-scrollbar {
+  width: 8px;
+  background: #e5e7eb;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* Cambiar el color de selección de texto */
+::selection {
+  background: #3b82f6;
+  color: #fff;
+}
+
+/* Ejemplo: cambiar el color de todos los enlaces */
+a {
+  color: #2563eb;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* Todos los botones con cursor pointer */
+button {
+  cursor: pointer;
+}
+
+@keyframes fade-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-fade-in-right {
+  animation: fade-in-right 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+table,
+th,
+td {
+  @apply font-sans;
+}
