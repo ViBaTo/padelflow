@@ -54,6 +54,14 @@ export const db = {
     return { data, error }
   },
 
+  updateAlumnoEstado: async (cedula, nuevoEstado) => {
+    const { data, error } = await supabase
+      .from('alumnos')
+      .update({ estado: nuevoEstado })
+      .eq('cedula', cedula)
+    return { data, error }
+  },
+
   // Profesores
   getProfesores: async () => {
     const { data, error } = await supabase.from('profesores').select('*')
@@ -125,6 +133,27 @@ export const db = {
   // Resumen
   getResumen: async () => {
     const { data, error } = await supabase.from('resumen').select('*')
+    return { data, error }
+  },
+
+  // Inscripciones
+  addInscripcion: async (inscripcion) => {
+    const { data, error } = await supabase
+      .from('inscripciones')
+      .insert([inscripcion])
+    return { data, error }
+  },
+
+  getInscripciones: async () => {
+    const { data, error } = await supabase.from('inscripciones').select('*')
+    return { data, error }
+  },
+
+  updateInscripcion: async (id, updates) => {
+    const { data, error } = await supabase
+      .from('inscripciones')
+      .update(updates)
+      .eq('id_inscripcion', id)
     return { data, error }
   }
 }

@@ -46,13 +46,21 @@ export const useStore = create((set) => ({
   },
 
   // Logout
-  logout: async () => {
+  logout: async (onLoggedOut) => {
     try {
-      const { error } = await auth.signOut()
-      if (error) throw error
-      set({ user: null, session: null })
+      const { session } = await auth.getSession()
+      if (session) {
+        // Solo intenta cerrar sesión si hay sesión activa
+        await auth.signOut()
+      }
     } catch (error) {
-      console.error('Error signing out:', error)
+      // Si el error es AuthSessionMissingError, lo ignoramos
+      if (!error.message?.includes('Auth session missing')) {
+        console.error('Error signing out:', error)
+      }
+    } finally {
+      set({ user: null, session: null })
+      if (typeof onLoggedOut === 'function') onLoggedOut()
     }
   }
 }))
