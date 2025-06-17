@@ -8,6 +8,7 @@
 body {
   background-color: #04192f;
   @apply font-sans;
+  overflow-x: hidden;
 }
 
 /* Personalizar el scroll */

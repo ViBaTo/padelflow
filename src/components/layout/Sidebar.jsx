@@ -12,8 +12,14 @@ import {
 } from 'lucide-react'
 import { useStore } from '../../lib/store'
 import { cn } from '../../lib/utils'
-import { useState } from 'react'
+import { useState, createContext, useContext } from 'react'
 import logo from '../../assets/images/logo.png'
+
+const SidebarContext = createContext()
+
+export function useSidebar() {
+  return useContext(SidebarContext)
+}
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -25,6 +31,44 @@ const navigation = [
   { name: 'Configuración', href: '/configuracion', icon: Settings }
 ]
 
+export function SidebarProvider({ children }) {
+  const [open, setOpen] = useState(false)
+  const value = {
+    open,
+    openSidebar: () => setOpen(true),
+    closeSidebar: () => setOpen(false),
+    toggleSidebar: () => setOpen((v) => !v)
+  }
+  return (
+    <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>
+  )
+}
+
+export function SidebarTrigger() {
+  const { toggleSidebar } = useSidebar()
+  return (
+    <button
+      className='p-2 text-gray-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 lg:hidden'
+      aria-label='Abrir menú'
+      onClick={toggleSidebar}
+    >
+      <svg
+        width='24'
+        height='24'
+        fill='none'
+        stroke='currentColor'
+        strokeWidth='2'
+        strokeLinecap='round'
+        strokeLinejoin='round'
+      >
+        <line x1='3' y1='12' x2='21' y2='12' />
+        <line x1='3' y1='6' x2='21' y2='6' />
+        <line x1='3' y1='18' x2='21' y2='18' />
+      </svg>
+    </button>
+  )
+}
+
 export function Sidebar() {
   const location = useLocation()
   const { sidebarOpen, logout } = useStore()
@@ -35,16 +79,68 @@ export function Sidebar() {
     logout(() => navigate('/login'))
   }
 
+  // Sidebar drawer para móvil
   return (
-    <div
-      className={cn(
-        'fixed inset-y-0 left-0 z-[60] w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 ease-in-out',
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      )}
-    >
-      <div className='flex flex-col h-full'>
-        {/* Logo */}
-        <div className='flex items-center justify-center h-20 px-4 border-b border-gray-200 dark:border-gray-800'>
+    <>
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 ease-in-out lg:hidden ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        tabIndex={-1}
+        aria-label='Sidebar'
+      >
+        <div className='flex flex-col h-full'>
+          <div className='flex items-center justify-between h-20 px-4 border-b border-gray-200 dark:border-gray-800'>
+            <div className='flex items-center'>
+              <img
+                src={logo}
+                alt='Logo LaPala Club'
+                className='h-10 w-10 object-contain mr-2'
+                style={{ minWidth: 40 }}
+              />
+              <span className='text-xl font-bold text-primary-600'>
+                LaPala Club
+              </span>
+            </div>
+            <button
+              className='p-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none'
+              onClick={() => logout(() => navigate('/login'))}
+              aria-label='Cerrar menú'
+            >
+              ×
+            </button>
+          </div>
+          <nav className='flex-1 px-2 py-4 space-y-1'>
+            {navigation.map((item) => {
+              const isActive = location.pathname === item.href
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => logout(() => navigate('/login'))}
+                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400'
+                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  <item.icon className='w-5 h-5 mr-3' />
+                  {item.name}
+                </Link>
+              )
+            })}
+          </nav>
+          <div className='p-4 border-t border-gray-200 dark:border-gray-800'>
+            <button className='flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'>
+              <LogOut className='w-5 h-5 mr-3' />
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </div>
+      {/* Sidebar fijo para escritorio */}
+      <div className='w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 hidden lg:flex flex-col'>
+        <div className='flex items-center h-20 px-4 border-b border-gray-200 dark:border-gray-800'>
           <img
             src={logo}
             alt='Logo LaPala Club'
@@ -55,8 +151,6 @@ export function Sidebar() {
             LaPala Club
           </span>
         </div>
-
-        {/* Navigation */}
         <nav className='flex-1 px-2 py-4 space-y-1'>
           {navigation.map((item) => {
             const isActive = location.pathname === item.href
@@ -64,12 +158,11 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 to={item.href}
-                className={cn(
-                  'flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                   isActive
                     ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400'
                     : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
-                )}
+                }`}
               >
                 <item.icon className='w-5 h-5 mr-3' />
                 {item.name}
@@ -77,36 +170,31 @@ export function Sidebar() {
             )
           })}
         </nav>
-
-        {/* Logout */}
         <div className='p-4 border-t border-gray-200 dark:border-gray-800'>
-          <button
-            onClick={handleLogout}
-            className='flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
-          >
+          <button className='flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'>
             <LogOut className='w-5 h-5 mr-3' />
             Cerrar sesión
           </button>
         </div>
-        {/* Modal de inscripción (placeholder) */}
-        {showInscripcionModal && (
-          <div className='fixed inset-0 z-50 flex justify-center items-center bg-black/40'>
-            <div className='bg-white rounded-lg p-8 shadow-lg relative w-full max-w-lg'>
-              <button
-                className='absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'
-                onClick={() => setShowInscripcionModal(false)}
-                aria-label='Cerrar'
-              >
-                ×
-              </button>
-              <h2 className='text-xl font-bold mb-4'>Nueva inscripción</h2>
-              <p className='text-gray-500'>
-                Aquí irá el formulario de inscripción.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+      {/* Modal de inscripción (placeholder) */}
+      {showInscripcionModal && (
+        <div className='fixed inset-0 z-50 flex justify-center items-center bg-black/40'>
+          <div className='bg-white rounded-lg p-8 shadow-lg relative w-full max-w-lg'>
+            <button
+              className='absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'
+              onClick={() => setShowInscripcionModal(false)}
+              aria-label='Cerrar'
+            >
+              ×
+            </button>
+            <h2 className='text-xl font-bold mb-4'>Nueva inscripción</h2>
+            <p className='text-gray-500'>
+              Aquí irá el formulario de inscripción.
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

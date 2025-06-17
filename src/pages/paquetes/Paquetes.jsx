@@ -27,7 +27,7 @@ export function Paquetes() {
   const [filterTipoServicio, setFilterTipoServicio] = useState('TODOS')
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const recordsPerPage = 15
+  const recordsPerPage = 5
   const contextMenuRef = useRef(null)
   const filterDropdownRef = useRef(null)
 
@@ -136,20 +136,23 @@ export function Paquetes() {
   const tiposServicioUnicos = [...new Set(paquetes.map((p) => p.tipo_servicio))]
 
   // Badges
-  const getCategoryBadge = (categoria) => {
+  const getTipoServicioBadge = (tipo) => {
     const colors = {
-      CLASE: 'bg-blue-100 text-blue-800',
+      CONDFIS: 'bg-blue-100 text-blue-800',
       ACADEMIA: 'bg-green-100 text-green-800',
-      TORNEO: 'bg-purple-100 text-purple-800',
+      CLINICA: 'bg-purple-100 text-purple-800',
+      PROFESOR_A: 'bg-yellow-100 text-yellow-800',
+      PROFESOR_B: 'bg-pink-100 text-pink-800',
+      INTENSIVO: 'bg-orange-100 text-orange-800',
       OTRO: 'bg-gray-100 text-gray-800'
     }
     return (
       <span
         className={`px-2 py-1 rounded-full text-xs font-medium ${
-          colors[categoria] || colors['OTRO']
+          colors[tipo] || colors['OTRO']
         }`}
       >
-        {categoria}
+        {tipo}
       </span>
     )
   }
@@ -158,210 +161,208 @@ export function Paquetes() {
   if (error) return <p className='text-red-500'>Error: {error}</p>
 
   return (
-    <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex justify-between items-center'>
-        <div>
-          <h1 className='text-3xl font-bold text-gray-900'>Paquetes</h1>
-          <p className='text-gray-600 mt-1'>
-            Gestiona los paquetes de servicios del club
-          </p>
+    <div className='flex flex-col flex-1 h-full p-6'>
+      {/* Header e indicadores */}
+      <div>
+        {/* Header */}
+        <div className='flex justify-between items-center'>
+          <div>
+            <h1 className='text-3xl font-bold text-gray-900'>Paquetes</h1>
+            <p className='text-gray-600 mt-1'>
+              Gestiona los paquetes de servicios del club
+            </p>
+          </div>
+          <button
+            className='bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold shadow flex items-center text-sm'
+            onClick={() => setShowModal(true)}
+          >
+            <Plus className='w-4 h-4 mr-2' />
+            Nuevo Paquete
+          </button>
         </div>
-        <button
-          className='bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold shadow flex items-center text-sm'
-          onClick={() => setShowModal(true)}
-        >
-          <Plus className='w-4 h-4 mr-2' />
-          Nuevo Paquete
-        </button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-        <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-          <div className='flex items-center justify-between'>
-            <span className='text-sm font-medium text-gray-600'>
-              Total Paquetes
-            </span>
-            <Package className='h-4 w-4 text-blue-600' />
-          </div>
-          <div className='text-2xl font-bold text-gray-900'>
-            {totalPaquetes}
-          </div>
-          <p className='text-xs text-gray-500 mt-1'>Paquetes disponibles</p>
-        </div>
-        <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-          <div className='flex items-center justify-between'>
-            <span className='text-sm font-medium text-gray-600'>
-              Ingresos Totales
-            </span>
-            <DollarSign className='h-4 w-4 text-green-600' />
-          </div>
-          <div className='text-2xl font-bold text-gray-900'>
-            {formatCurrency(totalIngresos)}
-          </div>
-          <p className='text-xs text-gray-500 mt-1'>Valor total de paquetes</p>
-        </div>
-        <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-          <div className='flex items-center justify-between'>
-            <span className='text-sm font-medium text-gray-600'>Servicios</span>
-            <Tag className='h-4 w-4 text-blue-600' />
-          </div>
-          <div className='text-2xl font-bold text-gray-900'>
-            {tiposServicioUnicos.length}
-          </div>
-          <p className='text-xs text-gray-500 mt-1'>Tipos de paquetes</p>
-        </div>
-      </div>
-
-      {/* Filtros y búsqueda */}
-      <div className='bg-white rounded-xl border border-gray-200 p-6'>
-        <div className='flex flex-col sm:flex-row gap-4 items-center justify-between'>
-          <h2 className='text-lg font-semibold text-gray-900'>
-            Lista de Paquetes
-          </h2>
-          <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
-            <div className='relative'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
-              <input
-                type='text'
-                placeholder='Buscar Paquetes...'
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className='pl-10 border border-gray-200 rounded-lg py-2 w-full sm:w-64 text-sm focus:ring-2 focus:ring-blue-100 focus:outline-none'
-              />
+        {/* Stats Cards */}
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 my-6'>
+          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm font-medium text-gray-600'>
+                Total Paquetes
+              </span>
+              <Package className='h-4 w-4 text-blue-600' />
             </div>
-            <div className='relative' ref={filterDropdownRef}>
-              <button
-                className='flex items-center border border-gray-200 px-4 py-2 rounded-lg text-gray-700 bg-white text-sm font-medium hover:bg-gray-50 transition'
-                onClick={() => setShowFilterDropdown((v) => !v)}
-                type='button'
-              >
-                <Filter className='w-4 h-4 mr-2' />
-                Filtros
-              </button>
-              {showFilterDropdown && (
-                <div className='absolute right-0 mt-2 w-40 bg-white border rounded-xl shadow z-10 p-3'>
-                  <label className='block text-xs font-semibold mb-1 text-gray-700'>
-                    Tipo de Servicio
-                  </label>
-                  <select
-                    value={filterTipoServicio}
-                    onChange={(e) => setFilterTipoServicio(e.target.value)}
-                    className='w-full border border-gray-200 p-2 rounded-lg text-sm'
-                  >
-                    <option value='TODOS'>Todos</option>
-                    {tiposServicioUnicos.map((tipo) => (
-                      <option key={tipo} value={tipo}>
-                        {tipo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            <div className='text-2xl font-bold text-gray-900'>
+              {totalPaquetes}
             </div>
+            <p className='text-xs text-gray-500 mt-1'>Paquetes disponibles</p>
+          </div>
+          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm font-medium text-gray-600'>
+                Ingresos Totales
+              </span>
+              <DollarSign className='h-4 w-4 text-green-600' />
+            </div>
+            <div className='text-2xl font-bold text-gray-900'>
+              {formatCurrency(totalIngresos)}
+            </div>
+            <p className='text-xs text-gray-500 mt-1'>
+              Valor total de paquetes
+            </p>
+          </div>
+          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm font-medium text-gray-600'>
+                Servicios
+              </span>
+              <Tag className='h-4 w-4 text-blue-600' />
+            </div>
+            <div className='text-2xl font-bold text-gray-900'>
+              {tiposServicioUnicos.length}
+            </div>
+            <p className='text-xs text-gray-500 mt-1'>Tipos de paquetes</p>
           </div>
         </div>
-      </div>
-
-      {/* Tabla de paquetes */}
-      <div className='overflow-x-auto'>
-        <table className='min-w-full bg-white rounded-xl border border-gray-200'>
-          <thead>
-            <tr className='bg-gray-50'>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Código
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Categoría
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Nombre
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Tipo de servicio
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Clases
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Precio
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Precio con IVA
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className='divide-y divide-gray-100'>
-            {paginatedPaquetes.map((paquete) => (
-              <tr
-                key={paquete.codigo}
-                className='hover:bg-gray-50 transition'
-                onContextMenu={(e) => handleContextMenu(e, paquete.codigo)}
-              >
-                <td className='px-6 py-4 text-sm text-gray-900'>
-                  {paquete.codigo}
-                </td>
-                <td className='px-6 py-4'>
-                  {getCategoryBadge(paquete.categoria)}
-                </td>
-                <td className='px-6 py-4 text-sm text-gray-900 font-medium'>
-                  {paquete.nombre}
-                </td>
-                <td className='px-6 py-4 text-sm text-gray-700'>
-                  {paquete.tipo_servicio}
-                </td>
-                <td className='px-6 py-4 text-sm text-gray-600'>
-                  {paquete.numero_clases}
-                </td>
-                <td className='px-6 py-4 text-sm text-gray-900'>
-                  {formatCurrency(paquete.precio)}
-                </td>
-                <td className='px-6 py-4 text-sm text-gray-900'>
-                  {formatCurrency(paquete.precio_con_iva)}
-                </td>
-                <td className='px-6 py-4'>
-                  <div className='flex space-x-2'>
-                    <button className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'>
-                      Ver
-                    </button>
-                    <button className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'>
-                      Editar
-                    </button>
+        {/* Filtros y búsqueda */}
+        <div className='bg-white rounded-xl border border-gray-200 p-6 mt-4'>
+          <div className='flex flex-col sm:flex-row gap-4 items-center justify-between'>
+            <h2 className='text-lg font-semibold text-gray-900'>
+              Lista de Paquetes
+            </h2>
+            <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
+              <div className='relative'>
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
+                <input
+                  type='text'
+                  placeholder='Buscar Paquetes...'
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className='pl-10 border border-gray-200 rounded-lg py-2 w-full sm:w-64 text-sm focus:ring-2 focus:ring-blue-100 focus:outline-none'
+                />
+              </div>
+              <div className='relative' ref={filterDropdownRef}>
+                <button
+                  className='flex items-center border border-gray-200 px-4 py-2 rounded-lg text-gray-700 bg-white text-sm font-medium hover:bg-gray-50 transition'
+                  onClick={() => setShowFilterDropdown((v) => !v)}
+                  type='button'
+                >
+                  <Filter className='w-4 h-4 mr-2' />
+                  Filtros
+                </button>
+                {showFilterDropdown && (
+                  <div className='absolute right-0 mt-2 w-40 bg-white border rounded-xl shadow z-10 p-3'>
+                    <label className='block text-xs font-semibold mb-1 text-gray-700'>
+                      Tipo de Servicio
+                    </label>
+                    <select
+                      value={filterTipoServicio}
+                      onChange={(e) => setFilterTipoServicio(e.target.value)}
+                      className='w-full border border-gray-200 p-2 rounded-lg text-sm'
+                    >
+                      <option value='TODOS'>Todos</option>
+                      {tiposServicioUnicos.map((tipo) => (
+                        <option key={tipo} value={tipo}>
+                          {tipo}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Paginación */}
-      {totalPages > 1 && (
-        <div className='flex gap-2 mt-4 items-center justify-end'>
-          <button
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
-          >
-            Anterior
-          </button>
-          <span className='text-xs text-gray-500'>
-            Página {currentPage} de {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
-          >
-            Siguiente
-          </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-
+      </div>
+      {/* Listado con scroll */}
+      <div className='flex-1 overflow-y-auto mt-4'>
+        {/* Tabla de paquetes */}
+        <div className='overflow-x-auto'>
+          <table className='min-w-full bg-white rounded-xl border border-gray-200'>
+            <thead>
+              <tr className='bg-gray-50'>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Código
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Nombre
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Tipo de servicio
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Clases
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Precio con IVA
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className='divide-y divide-gray-100'>
+              {paginatedPaquetes.map((paquete) => (
+                <tr
+                  key={paquete.codigo}
+                  className='hover:bg-gray-50 transition'
+                  onContextMenu={(e) => handleContextMenu(e, paquete.codigo)}
+                >
+                  <td className='px-6 py-4 text-sm text-gray-900'>
+                    {paquete.codigo}
+                  </td>
+                  <td className='px-6 py-4 text-sm text-gray-900 font-medium'>
+                    {paquete.nombre}
+                  </td>
+                  <td className='px-6 py-4 text-sm text-gray-700'>
+                    {getTipoServicioBadge(paquete.tipo_servicio)}
+                  </td>
+                  <td className='px-6 py-4 text-sm text-gray-600'>
+                    {paquete.numero_clases}
+                  </td>
+                  <td className='px-6 py-4 text-sm text-gray-900'>
+                    <span className='font-bold text-green-600'>
+                      $
+                      {formatCurrency(
+                        paquete.precio_con_iva * paquete.numero_clases
+                      )}
+                    </span>
+                  </td>
+                  <td className='px-6 py-4'>
+                    <div className='flex space-x-2'>
+                      <button className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'>
+                        Ver
+                      </button>
+                      <button className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'>
+                        Editar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <div className='flex gap-2 mt-4 items-center justify-end'>
+            <button
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
+            >
+              Anterior
+            </button>
+            <span className='text-xs text-gray-500'>
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
+      </div>
       {/* Modal para añadir paquete */}
       {showModal && (
         <div className='fixed inset-0 z-50 flex justify-end bg-black/50 transition-opacity duration-300'>
@@ -382,7 +383,6 @@ export function Paquetes() {
           </div>
         </div>
       )}
-
       {/* Menú contextual */}
       {contextMenu.visible && (
         <ul

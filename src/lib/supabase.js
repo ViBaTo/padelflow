@@ -54,10 +54,18 @@ export const db = {
     return { data, error }
   },
 
+  updateAlumno: async (cedula, updates) => {
+    const { data, error } = await supabase
+      .from('alumnos')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('cedula', cedula)
+    return { data, error }
+  },
+
   updateAlumnoEstado: async (cedula, nuevoEstado) => {
     const { data, error } = await supabase
       .from('alumnos')
-      .update({ estado: nuevoEstado })
+      .update({ estado: nuevoEstado, updated_at: new Date().toISOString() })
       .eq('cedula', cedula)
     return { data, error }
   },
@@ -70,6 +78,14 @@ export const db = {
 
   addProfesor: async (profesor) => {
     const { data, error } = await supabase.from('profesores').insert([profesor])
+    return { data, error }
+  },
+
+  updateProfesor: async (id_profesor, updates) => {
+    const { data, error } = await supabase
+      .from('profesores')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id_profesor', id_profesor)
     return { data, error }
   },
 
@@ -149,11 +165,35 @@ export const db = {
     return { data, error }
   },
 
+  getInscripcionesActivas: async () => {
+    const { data, error } = await supabase
+      .from('inscripciones')
+      .select('*')
+      .eq('estado', 'activo')
+      .order('fecha_fin', { ascending: true })
+    return { data, error }
+  },
+
   updateInscripcion: async (id, updates) => {
     const { data, error } = await supabase
       .from('inscripciones')
-      .update(updates)
+      .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id_inscripcion', id)
+    return { data, error }
+  },
+
+  deleteInscripcion: async (id_inscripcion) => {
+    const { data, error } = await supabase
+      .from('inscripciones')
+      .delete()
+      .eq('id_inscripcion', id_inscripcion)
+    return { data, error }
+  },
+
+  getVistaInscripcionesActivas: async () => {
+    const { data, error } = await supabase
+      .from('vista_inscripciones_activas')
+      .select('*')
     return { data, error }
   }
 }

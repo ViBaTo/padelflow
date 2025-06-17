@@ -5,6 +5,73 @@ import { useState, useEffect, useRef } from 'react'
 import { db, supabase } from '../../lib/supabase'
 import { NuevaInscripcionForm } from '../NuevaInscripcionForm'
 
+// Subcomponentes
+function MenuButton({ onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className='p-2 text-gray-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 lg:hidden touch-manipulation'
+      aria-label='Abrir menú'
+    >
+      <Menu className='w-5 h-5 sm:w-6 sm:h-6' />
+    </button>
+  )
+}
+
+function NuevaInscripcionButton({ onClick }) {
+  return (
+    <button
+      className='flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition-colors disabled:opacity-50 text-sm sm:text-base'
+      onClick={onClick}
+    >
+      <UserPlus className='w-4 h-4 mr-2' />
+      <span>Nueva inscripción</span>
+      <span className='sm:hidden'>Nueva</span>
+    </button>
+  )
+}
+
+function ThemeToggle({ isDarkMode, toggleDarkMode }) {
+  return (
+    <button
+      onClick={toggleDarkMode}
+      className='p-2 text-gray-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 touch-manipulation'
+      aria-label={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+    >
+      {isDarkMode ? (
+        <Sun className='w-5 h-5 sm:w-6 sm:h-6' />
+      ) : (
+        <Moon className='w-5 h-5 sm:w-6 sm:h-6' />
+      )}
+    </button>
+  )
+}
+
+function NotificationsButton() {
+  return (
+    <button
+      className='p-2 text-gray-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 touch-manipulation'
+      aria-label='Notificaciones'
+    >
+      <Bell className='w-5 h-5 sm:w-6 sm:h-6' />
+    </button>
+  )
+}
+
+function UserMenu() {
+  return (
+    <div className='relative'>
+      <button className='flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 touch-manipulation'>
+        <div className='w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center'>
+          <span className='text-xs sm:text-sm font-medium text-primary-600 dark:text-primary-400'>
+            U
+          </span>
+        </div>
+      </button>
+    </div>
+  )
+}
+
 export function Header() {
   const { sidebarOpen, toggleSidebar, isDarkMode, toggleDarkMode } = useStore()
   const [showInscripcionModal, setShowInscripcionModal] = useState(false)
@@ -128,54 +195,30 @@ export function Header() {
   const alumnoNoSeleccionado = alumnoSearch && !form.alumno
 
   return (
-    <header className='fixed top-0 right-0 left-0 z-50 h-20 bg-white border-b border-gray-200 pl-64'>
-      <div className='flex items-center justify-between h-full px-4'>
+    <header
+      className='
+    h-20 lg:h-20
+    bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800
+    transition-all duration-300 ease-in-out
+    z-0
+  '
+    >
+      <div className='flex items-center justify-between h-full px-4 sm:px-6'>
         {/* Left side */}
-        <div className='flex items-center gap-4'>
-          {/* Menú hamburguesa solo en móvil */}
-          <button
-            onClick={toggleSidebar}
-            className='p-2 text-gray-500 rounded-lg hover:bg-gray-100 md:hidden'
-          >
-            <Menu className='w-6 h-6' />
-          </button>
-          {/* Botón de nueva inscripción */}
-          <button
-            className='flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow text-sm'
+        <div className='flex items-center gap-2 sm:gap-4'>
+          <MenuButton onClick={toggleSidebar} />
+          <NuevaInscripcionButton
             onClick={() => setShowInscripcionModal(true)}
-          >
-            <UserPlus className='w-4 h-4 mr-2' />
-            Nueva inscripción
-          </button>
+          />
         </div>
-
         {/* Right side */}
-        <div className='flex items-center space-x-4'>
-          {/* Theme toggle */}
-          <button
-            onClick={toggleDarkMode}
-            className='p-2 text-gray-500 rounded-lg hover:bg-gray-100'
-          >
-            {isDarkMode ? (
-              <Sun className='w-6 h-6' />
-            ) : (
-              <Moon className='w-6 h-6' />
-            )}
-          </button>
-
-          {/* Notifications */}
-          <button className='p-2 text-gray-500 rounded-lg hover:bg-gray-100'>
-            <Bell className='w-6 h-6' />
-          </button>
-
-          {/* User menu */}
-          <div className='relative'>
-            <button className='flex items-center space-x-2'>
-              <div className='w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center'>
-                <span className='text-sm font-medium text-primary-600'>U</span>
-              </div>
-            </button>
-          </div>
+        <div className='flex items-center space-x-2 sm:space-x-4'>
+          <ThemeToggle
+            isDarkMode={isDarkMode}
+            toggleDarkMode={toggleDarkMode}
+          />
+          <NotificationsButton />
+          <UserMenu />
         </div>
         {/* Modal de inscripción */}
         <NuevaInscripcionForm

@@ -1,7 +1,12 @@
 import { useEffect, useState, useRef } from 'react'
 import { db, supabase } from '../lib/supabase'
 
-export function NuevaInscripcionForm({ open, onClose, onSuccess }) {
+export function NuevaInscripcionForm({
+  open,
+  onClose,
+  onSuccess,
+  alumnoPreSeleccionado
+}) {
   const [alumnos, setAlumnos] = useState([])
   const [paquetes, setPaquetes] = useState([])
   const [profesores, setProfesores] = useState([])
@@ -23,11 +28,22 @@ export function NuevaInscripcionForm({ open, onClose, onSuccess }) {
       db.getAlumnos().then(({ data }) => setAlumnos(data || []))
       db.getPaquetes().then(({ data }) => setPaquetes(data || []))
       db.getProfesores().then(({ data }) => setProfesores(data || []))
-      setForm({ alumno: '', paquete: '', fecha: '', profesor: '' })
+
+      if (alumnoPreSeleccionado) {
+        setForm((prev) => ({
+          ...prev,
+          alumno: alumnoPreSeleccionado.cedula
+        }))
+        setAlumnoSearch(alumnoPreSeleccionado.nombre_completo)
+      } else {
+        setForm({ alumno: '', paquete: '', fecha: '', profesor: '' })
+        setAlumnoSearch('')
+      }
+
       setError('')
       setSuccess('')
     }
-  }, [open])
+  }, [open, alumnoPreSeleccionado])
 
   const alumnosFiltrados = alumnoSearch
     ? alumnos.filter(
@@ -152,29 +168,34 @@ export function NuevaInscripcionForm({ open, onClose, onSuccess }) {
                 setShowAlumnoDropdown(true)
                 setForm({ ...form, alumno: '' })
               }}
-              onFocus={() => setShowAlumnoDropdown(true)}
+              onFocus={() =>
+                !alumnoPreSeleccionado && setShowAlumnoDropdown(true)
+              }
               placeholder='Escribe el nombre del alumno...'
               className={`border p-2 rounded w-full ${
                 alumnoNoSeleccionado ? 'border-red-500' : ''
               }`}
               required
+              disabled={!!alumnoPreSeleccionado}
             />
-            {showAlumnoDropdown && alumnosFiltrados.length > 0 && (
-              <ul className='absolute z-10 bg-white border rounded w-full mt-1 max-h-48 overflow-y-auto shadow'>
-                {alumnosFiltrados.map((a) => (
-                  <li
-                    key={a.cedula}
-                    className='px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm'
-                    onClick={() =>
-                      handleAlumnoSelect(a.cedula, a.nombre_completo)
-                    }
-                  >
-                    {a.nombre_completo}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {alumnoNoSeleccionado && (
+            {showAlumnoDropdown &&
+              alumnosFiltrados.length > 0 &&
+              !alumnoPreSeleccionado && (
+                <ul className='absolute z-10 bg-white border rounded w-full mt-1 max-h-48 overflow-y-auto shadow'>
+                  {alumnosFiltrados.map((a) => (
+                    <li
+                      key={a.cedula}
+                      className='px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm'
+                      onClick={() =>
+                        handleAlumnoSelect(a.cedula, a.nombre_completo)
+                      }
+                    >
+                      {a.nombre_completo}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            {alumnoNoSeleccionado && !alumnoPreSeleccionado && (
               <div className='text-red-500 text-xs mt-1'>
                 Selecciona un alumno de la lista.
               </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { db } from '../../lib/supabase'
 import { GenericForm } from '../../components/GenericForm'
+import { TeacherDetailsModal } from '../../components/TeacherDetailsModal'
 import {
   UserCog,
   Search,
@@ -16,6 +17,11 @@ export function Profesores() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showModal, setShowModal] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [selectedTeacher, setSelectedTeacher] = useState(null)
+  const [inscripciones, setInscripciones] = useState([])
+  const [alumnos, setAlumnos] = useState([])
+  const [paquetes, setPaquetes] = useState([])
   const [contextMenu, setContextMenu] = useState({
     visible: false,
     x: 0,
@@ -38,8 +44,26 @@ export function Profesores() {
     setLoading(false)
   }
 
+  const fetchInscripciones = async () => {
+    const { data, error } = await db.getInscripciones()
+    if (!error) setInscripciones(data || [])
+  }
+
+  const fetchAlumnos = async () => {
+    const { data, error } = await db.getAlumnos()
+    if (!error) setAlumnos(data || [])
+  }
+
+  const fetchPaquetes = async () => {
+    const { data, error } = await db.getPaquetes()
+    if (!error) setPaquetes(data || [])
+  }
+
   useEffect(() => {
     fetchProfesores()
+    fetchInscripciones()
+    fetchAlumnos()
+    fetchPaquetes()
   }, [])
 
   useEffect(() => {
@@ -77,6 +101,11 @@ export function Profesores() {
     const { error } = await db.deleteProfesor(id_profesor)
     if (error) setError(error.message)
     else fetchProfesores()
+  }
+
+  const handleViewTeacher = (profesor) => {
+    setSelectedTeacher(profesor)
+    setShowDetailsModal(true)
   }
 
   const handleContextMenu = (e, id_profesor) => {
@@ -166,207 +195,208 @@ export function Profesores() {
   if (error) return <p className='text-red-500'>Error: {error}</p>
 
   return (
-    <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex justify-between items-center'>
-        <div>
-          <h1 className='text-3xl font-bold text-gray-900'>Profesores</h1>
-          <p className='text-gray-600 mt-1'>
-            Gestiona los profesores del club de pádel
-          </p>
+    <div className='flex flex-col flex-1 h-full p-6'>
+      {/* Header e indicadores */}
+      <div>
+        {/* Header */}
+        <div className='flex justify-between items-center'>
+          <div>
+            <h1 className='text-3xl font-bold text-gray-900'>Profesores</h1>
+            <p className='text-gray-600 mt-1'>
+              Gestiona los profesores del club de pádel
+            </p>
+          </div>
+          <button
+            className='bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold shadow flex items-center text-sm'
+            onClick={() => setShowModal(true)}
+          >
+            <Plus className='w-4 h-4 mr-2' />
+            Nuevo Profesor
+          </button>
         </div>
-        <button
-          className='bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold shadow flex items-center text-sm'
-          onClick={() => setShowModal(true)}
-        >
-          <Plus className='w-4 h-4 mr-2' />
-          Nuevo Profesor
-        </button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-        <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-          <div className='flex items-center justify-between'>
-            <span className='text-sm font-medium text-gray-600'>
-              Total Profesores
-            </span>
-            <UserCog className='h-4 w-4 text-blue-600' />
-          </div>
-          <div className='text-2xl font-bold text-gray-900'>
-            {totalProfesores}
-          </div>
-          <p className='text-xs text-gray-500 mt-1'>Profesores registrados</p>
-        </div>
-        <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-          <div className='flex items-center justify-between'>
-            <span className='text-sm font-medium text-gray-600'>
-              Profesores Academia
-            </span>
-            <Award className='h-4 w-4 text-green-600' />
-          </div>
-          <div className='text-2xl font-bold text-gray-900'>
-            {profesoresAcademia}
-          </div>
-          <p className='text-xs text-gray-500 mt-1'>
-            Pueden dar clases de academia
-          </p>
-        </div>
-        <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-          <div className='flex items-center justify-between'>
-            <span className='text-sm font-medium text-gray-600'>Niveles</span>
-            <Award className='h-4 w-4 text-blue-600' />
-          </div>
-          <div className='text-2xl font-bold text-gray-900'>
-            {nivelesUnicos.length}
-          </div>
-          <p className='text-xs text-gray-500 mt-1'></p>
-        </div>
-      </div>
-
-      {/* Filtros y búsqueda */}
-      <div className='bg-white rounded-xl border border-gray-200 p-6'>
-        <div className='flex flex-col sm:flex-row gap-4 items-center justify-between'>
-          <h2 className='text-lg font-semibold text-gray-900'>
-            Lista de Profesores
-          </h2>
-          <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
-            <div className='relative'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
-              <input
-                type='text'
-                placeholder='Buscar Profesores...'
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className='pl-10 border border-gray-200 rounded-lg py-2 w-full sm:w-64 text-sm focus:ring-2 focus:ring-blue-100 focus:outline-none'
-              />
+        {/* Stats Cards */}
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 my-6'>
+          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm font-medium text-gray-600'>
+                Total Profesores
+              </span>
+              <UserCog className='h-4 w-4 text-blue-600' />
             </div>
-            <div className='relative' ref={filterDropdownRef}>
-              <button
-                className='flex items-center border border-gray-200 px-4 py-2 rounded-lg text-gray-700 bg-white text-sm font-medium hover:bg-gray-50 transition'
-                onClick={() => setShowFilterDropdown((v) => !v)}
-                type='button'
-              >
-                <Filter className='w-4 h-4 mr-2' />
-                Filtros
-              </button>
-              {showFilterDropdown && (
-                <div className='absolute right-0 mt-2 w-40 bg-white border rounded-xl shadow z-10 p-3'>
-                  <label className='block text-xs font-semibold mb-1 text-gray-700'>
-                    Nivel
-                  </label>
-                  <select
-                    value={filterNivel}
-                    onChange={(e) => setFilterNivel(e.target.value)}
-                    className='w-full border border-gray-200 p-2 rounded-lg text-sm'
-                  >
-                    <option value='TODOS'>Todos</option>
-                    {nivelesUnicos.map((nivel) => (
-                      <option key={nivel} value={nivel}>
-                        {nivel}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            <div className='text-2xl font-bold text-gray-900'>
+              {totalProfesores}
             </div>
+            <p className='text-xs text-gray-500 mt-1'>Profesores registrados</p>
+          </div>
+          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm font-medium text-gray-600'>
+                Profesores Academia
+              </span>
+              <Award className='h-4 w-4 text-green-600' />
+            </div>
+            <div className='text-2xl font-bold text-gray-900'>
+              {profesoresAcademia}
+            </div>
+            <p className='text-xs text-gray-500 mt-1'>
+              Pueden dar clases de academia
+            </p>
+          </div>
+          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm font-medium text-gray-600'>Niveles</span>
+              <Award className='h-4 w-4 text-blue-600' />
+            </div>
+            <div className='text-2xl font-bold text-gray-900'>
+              {nivelesUnicos.length}
+            </div>
+            <p className='text-xs text-gray-500 mt-1'></p>
           </div>
         </div>
-      </div>
-
-      {/* Tabla de profesores */}
-      <div className='overflow-x-auto'>
-        <table className='min-w-full bg-white rounded-xl border border-gray-200'>
-          <thead>
-            <tr className='bg-gray-50'>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                ID Profesor
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Nombre
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Teléfono
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Nivel
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Academia
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Fecha Ingreso
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className='divide-y divide-gray-100'>
-            {paginatedProfesores.map((profesor) => (
-              <tr
-                key={profesor.id_profesor}
-                className='hover:bg-gray-50 transition'
-                onContextMenu={(e) =>
-                  handleContextMenu(e, profesor.id_profesor)
-                }
-              >
-                <td className='px-6 py-4 text-sm text-gray-900'>
-                  {profesor.id_profesor}
-                </td>
-                <td className='px-6 py-4 text-sm text-gray-900 font-medium'>
-                  {profesor.nombre_completo}
-                </td>
-                <td className='px-6 py-4 text-sm text-gray-700 flex items-center gap-2'>
-                  <Phone className='w-4 h-4 text-gray-400' />
-                  {profesor.telefono}
-                </td>
-                <td className='px-6 py-4'>{getNivelBadge(profesor.nivel)}</td>
-                <td className='px-6 py-4'>
-                  {getAcademiaBadge(profesor.puede_academia)}
-                </td>
-                <td className='px-6 py-4 text-sm text-gray-600'>
-                  {profesor.fecha_ingreso}
-                </td>
-                <td className='px-6 py-4'>
-                  <div className='flex space-x-2'>
-                    <button className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'>
-                      Ver
-                    </button>
-                    <button className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'>
-                      Editar
-                    </button>
+        {/* Filtros y búsqueda */}
+        <div className='bg-white rounded-xl border border-gray-200 p-6 mt-4'>
+          <div className='flex flex-col sm:flex-row gap-4 items-center justify-between'>
+            <h2 className='text-lg font-semibold text-gray-900'>
+              Lista de Profesores
+            </h2>
+            <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
+              <div className='relative'>
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
+                <input
+                  type='text'
+                  placeholder='Buscar Profesores...'
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className='pl-10 border border-gray-200 rounded-lg py-2 w-full sm:w-64 text-sm focus:ring-2 focus:ring-blue-100 focus:outline-none'
+                />
+              </div>
+              <div className='relative' ref={filterDropdownRef}>
+                <button
+                  className='flex items-center border border-gray-200 px-4 py-2 rounded-lg text-gray-700 bg-white text-sm font-medium hover:bg-gray-50 transition'
+                  onClick={() => setShowFilterDropdown((v) => !v)}
+                  type='button'
+                >
+                  <Filter className='w-4 h-4 mr-2' />
+                  Filtros
+                </button>
+                {showFilterDropdown && (
+                  <div className='absolute right-0 mt-2 w-40 bg-white border rounded-xl shadow z-10 p-3'>
+                    <label className='block text-xs font-semibold mb-1 text-gray-700'>
+                      Nivel
+                    </label>
+                    <select
+                      value={filterNivel}
+                      onChange={(e) => setFilterNivel(e.target.value)}
+                      className='w-full border border-gray-200 p-2 rounded-lg text-sm'
+                    >
+                      <option value='TODOS'>Todos</option>
+                      {nivelesUnicos.map((nivel) => (
+                        <option key={nivel} value={nivel}>
+                          {nivel}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Paginación */}
-      {totalPages > 1 && (
-        <div className='flex gap-2 mt-4 items-center justify-end'>
-          <button
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
-          >
-            Anterior
-          </button>
-          <span className='text-xs text-gray-500'>
-            Página {currentPage} de {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
-          >
-            Siguiente
-          </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-
+      </div>
+      {/* Listado con scroll */}
+      <div className='flex-1 overflow-y-auto mt-4'>
+        {/* Tabla de profesores */}
+        <div className='overflow-x-auto'>
+          <table className='min-w-full bg-white rounded-xl border border-gray-200'>
+            <thead>
+              <tr className='bg-gray-50'>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  ID Profesor
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Nombre
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Teléfono
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Nivel
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Academia
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Fecha Ingreso
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className='divide-y divide-gray-100'>
+              {paginatedProfesores.map((profesor) => (
+                <tr
+                  key={profesor.id_profesor}
+                  className='hover:bg-gray-50 transition'
+                  onContextMenu={(e) =>
+                    handleContextMenu(e, profesor.id_profesor)
+                  }
+                >
+                  <td className='px-6 py-4 text-sm text-gray-900'>
+                    {profesor.id_profesor}
+                  </td>
+                  <td className='px-6 py-4 text-sm text-gray-900 font-medium'>
+                    {profesor.nombre_completo}
+                  </td>
+                  <td className='px-6 py-4 text-sm text-gray-700 flex items-center gap-2'>
+                    <Phone className='w-4 h-4 text-gray-400' />
+                    {profesor.telefono}
+                  </td>
+                  <td className='px-6 py-4'>{getNivelBadge(profesor.nivel)}</td>
+                  <td className='px-6 py-4'>
+                    {getAcademiaBadge(profesor.puede_academia)}
+                  </td>
+                  <td className='px-6 py-4 text-sm text-gray-600'>
+                    {profesor.fecha_ingreso}
+                  </td>
+                  <td className='px-6 py-4'>
+                    <div className='flex space-x-2'>
+                      <button
+                        onClick={() => handleViewTeacher(profesor)}
+                        className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'
+                      >
+                        Ver
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <div className='flex gap-2 mt-4 items-center justify-end'>
+            <button
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
+            >
+              Anterior
+            </button>
+            <span className='text-xs text-gray-500'>
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
+      </div>
       {/* Modal para añadir profesor */}
       {showModal && (
         <div className='fixed inset-0 z-50 flex justify-end bg-black/50 transition-opacity duration-300'>
@@ -387,7 +417,6 @@ export function Profesores() {
           </div>
         </div>
       )}
-
       {/* Menú contextual */}
       {contextMenu.visible && (
         <ul
@@ -405,6 +434,19 @@ export function Profesores() {
           </li>
         </ul>
       )}
+
+      {/* Modal de detalles del profesor */}
+      <TeacherDetailsModal
+        open={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false)
+          setSelectedTeacher(null)
+        }}
+        teacher={selectedTeacher}
+        inscripciones={inscripciones}
+        alumnos={alumnos}
+        paquetes={paquetes}
+      />
     </div>
   )
 }
