@@ -1,5 +1,6 @@
 import { Sun, Moon, Bell, UserPlus, Menu } from 'lucide-react'
 import { useStore } from '../../lib/store'
+import { useSidebar } from './Sidebar'
 import { cn } from '../../lib/utils'
 import { useState, useEffect, useRef } from 'react'
 import { db, supabase } from '../../lib/supabase'
@@ -73,7 +74,8 @@ function UserMenu() {
 }
 
 export function Header() {
-  const { sidebarOpen, toggleSidebar, isDarkMode, toggleDarkMode } = useStore()
+  const { isDarkMode, toggleDarkMode } = useStore()
+  const { openSidebar } = useSidebar()
   const [showInscripcionModal, setShowInscripcionModal] = useState(false)
   const [alumnos, setAlumnos] = useState([])
   const [paquetes, setPaquetes] = useState([])
@@ -206,7 +208,7 @@ export function Header() {
       <div className='flex items-center justify-between h-full px-4 sm:px-6'>
         {/* Left side */}
         <div className='flex items-center gap-2 sm:gap-4'>
-          <MenuButton onClick={toggleSidebar} />
+          <MenuButton onClick={openSidebar} />
           <NuevaInscripcionButton
             onClick={() => setShowInscripcionModal(true)}
           />

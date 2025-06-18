@@ -71,73 +71,88 @@ export function SidebarTrigger() {
 
 export function Sidebar() {
   const location = useLocation()
-  const { sidebarOpen, logout } = useStore()
+  const { logout } = useStore()
   const navigate = useNavigate()
   const [showInscripcionModal, setShowInscripcionModal] = useState(false)
+  const { open, closeSidebar } = useSidebar()
 
   const handleLogout = () => {
     logout(() => navigate('/login'))
   }
 
-  // Sidebar drawer para móvil
+  // Drawer desde arriba para móvil
   return (
     <>
-      <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 ease-in-out lg:hidden ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        tabIndex={-1}
-        aria-label='Sidebar'
-      >
-        <div className='flex flex-col h-full'>
-          <div className='flex items-center justify-between h-20 px-4 border-b border-gray-200 dark:border-gray-800'>
-            <div className='flex items-center'>
-              <img
-                src={logo}
-                alt='Logo LaPala Club'
-                className='h-10 w-10 object-contain mr-2'
-                style={{ minWidth: 40 }}
-              />
-              <span className='text-xl font-bold text-primary-600'>
-                LaPala Club
-              </span>
-            </div>
-            <button
-              className='p-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none'
-              onClick={() => logout(() => navigate('/login'))}
-              aria-label='Cerrar menú'
-            >
-              ×
-            </button>
-          </div>
-          <nav className='flex-1 px-2 py-4 space-y-1'>
-            {navigation.map((item) => {
-              const isActive = location.pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => logout(() => navigate('/login'))}
-                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400'
-                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
-                  }`}
+      {open && (
+        <>
+          {/* Fondo borroso */}
+          <div
+            className='fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden'
+            onClick={closeSidebar}
+            aria-label='Cerrar fondo sidebar'
+          />
+          {/* Drawer */}
+          <div
+            className={`fixed top-0 left-0 w-full h-[80vh] z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-xl transition-transform duration-300 ease-in-out lg:hidden ${
+              open ? 'translate-y-0' : '-translate-y-full'
+            }`}
+            tabIndex={-1}
+            aria-label='Sidebar'
+          >
+            <div className='flex flex-col h-full'>
+              <div className='flex items-center justify-between h-20 px-4 border-b border-gray-200 dark:border-gray-800'>
+                <div className='flex items-center'>
+                  <img
+                    src={logo}
+                    alt='Logo LaPala Club'
+                    className='h-10 w-10 object-contain mr-2'
+                    style={{ minWidth: 40 }}
+                  />
+                  <span className='text-xl font-bold text-primary-600'>
+                    LaPala Club
+                  </span>
+                </div>
+                <button
+                  className='p-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none'
+                  onClick={closeSidebar}
+                  aria-label='Cerrar menú'
                 >
-                  <item.icon className='w-5 h-5 mr-3' />
-                  {item.name}
-                </Link>
-              )
-            })}
-          </nav>
-          <div className='p-4 border-t border-gray-200 dark:border-gray-800'>
-            <button className='flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'>
-              <LogOut className='w-5 h-5 mr-3' />
-              Cerrar sesión
-            </button>
+                  ×
+                </button>
+              </div>
+              <nav className='flex-1 px-2 py-4 space-y-1 overflow-y-auto'>
+                {navigation.map((item) => {
+                  const isActive = location.pathname === item.href
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={closeSidebar}
+                      className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400'
+                          : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      <item.icon className='w-5 h-5 mr-3' />
+                      {item.name}
+                    </Link>
+                  )
+                })}
+              </nav>
+              <div className='p-4 border-t border-gray-200 dark:border-gray-800'>
+                <button
+                  className='flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                  onClick={handleLogout}
+                >
+                  <LogOut className='w-5 h-5 mr-3' />
+                  Cerrar sesión
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
       {/* Sidebar fijo para escritorio */}
       <div className='w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 hidden lg:flex flex-col'>
         <div className='flex items-center h-20 px-4 border-b border-gray-200 dark:border-gray-800'>
@@ -171,7 +186,10 @@ export function Sidebar() {
           })}
         </nav>
         <div className='p-4 border-t border-gray-200 dark:border-gray-800'>
-          <button className='flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'>
+          <button
+            className='flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+            onClick={handleLogout}
+          >
             <LogOut className='w-5 h-5 mr-3' />
             Cerrar sesión
           </button>

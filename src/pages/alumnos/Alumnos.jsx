@@ -11,6 +11,8 @@ import {
   Mail
 } from 'lucide-react'
 import { StudentDetailsModal } from '../../components/StudentDetailsModal'
+import Papa from 'papaparse'
+import * as XLSX from 'xlsx'
 
 export default function Alumnos() {
   const [alumnos, setAlumnos] = useState([])
@@ -36,6 +38,10 @@ export default function Alumnos() {
   const filterDropdownRef = useRef(null)
   const [selectedAlumno, setSelectedAlumno] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importError, setImportError] = useState(null)
+  const [importSuccess, setImportSuccess] = useState(null)
 
   const fetchAlumnos = async () => {
     setLoading(true)
@@ -306,6 +312,76 @@ export default function Alumnos() {
     )
   }
 
+  // Importar alumnos desde archivo
+  const handleImportFile = (e) => {
+    setImportError(null)
+    setImportSuccess(null)
+    const file = e.target.files[0]
+    if (!file) return
+    setImportLoading(true)
+    const ext = file.name.split('.').pop().toLowerCase()
+    if (ext === 'csv') {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => processRows(results.data, results.meta.fields),
+        error: (err) => {
+          setImportError('Error al leer el archivo: ' + err.message)
+          setImportLoading(false)
+        }
+      })
+    } else if (ext === 'xlsx') {
+      const reader = new FileReader()
+      reader.onload = (evt) => {
+        const data = new Uint8Array(evt.target.result)
+        const workbook = XLSX.read(data, { type: 'array' })
+        const sheet = workbook.Sheets[workbook.SheetNames[0]]
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
+        const fields = Object.keys(rows[0] || {})
+        processRows(rows, fields)
+      }
+      reader.readAsArrayBuffer(file)
+    } else {
+      setImportError('Formato no soportado. Sube un archivo .csv o .xlsx')
+      setImportLoading(false)
+    }
+  }
+
+  // Procesar filas y subir a Supabase
+  const processRows = async (rows, fields) => {
+    const required = [
+      'cedula',
+      'nombre_completo',
+      'telefono',
+      'fecha_registro',
+      'estado'
+    ]
+    const missing = required.filter((f) => !fields.includes(f))
+    if (missing.length > 0) {
+      setImportError('Faltan columnas: ' + missing.join(', '))
+      setImportLoading(false)
+      return
+    }
+    try {
+      let errors = []
+      for (const alumno of rows) {
+        const { error } = await db.addAlumno(alumno)
+        if (error) errors.push(`${alumno.cedula}: ${error.message}`)
+      }
+      if (errors.length > 0) {
+        setImportError('Errores al importar:\n' + errors.join('\n'))
+      } else {
+        setImportSuccess('Importación exitosa')
+        fetchAlumnos()
+        setShowImportModal(false)
+      }
+    } catch (err) {
+      setImportError('Error inesperado: ' + err.message)
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
   return (
     <div className='flex flex-col flex-1 h-full p-6'>
       {/* Header e indicadores */}
@@ -318,13 +394,21 @@ export default function Alumnos() {
               Gestiona los estudiantes del club de pádel
             </p>
           </div>
-          <button
-            className='bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold shadow flex items-center text-sm'
-            onClick={() => setShowModal(true)}
-          >
-            <Plus className='w-4 h-4 mr-2' />
-            Nuevo Estudiante
-          </button>
+          <div className='flex gap-2'>
+            <button
+              className='bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold shadow flex items-center text-sm'
+              onClick={() => setShowModal(true)}
+            >
+              <Plus className='w-4 h-4 mr-2' />
+              Nuevo Estudiante
+            </button>
+            <button
+              className='bg-gray-100 hover:bg-gray-200 text-blue-700 px-5 py-2 rounded-lg font-semibold shadow flex items-center text-sm border border-gray-300'
+              onClick={() => setShowImportModal(true)}
+            >
+              Importar CSV
+            </button>
+          </div>
         </div>
         {/* Stats Cards */}
         <div className='grid grid-cols-1 md:grid-cols-3 gap-6 my-6'>
@@ -559,6 +643,56 @@ export default function Alumnos() {
         categorias={categorias}
         profesores={profesores}
       />
+      {/* Modal de importación de alumnos */}
+      {showImportModal && (
+        <div className='fixed inset-0 z-50 flex justify-center items-center bg-black/40'>
+          <div className='bg-white rounded-lg p-8 shadow-lg relative w-full max-w-md'>
+            <button
+              className='absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'
+              onClick={() => setShowImportModal(false)}
+              aria-label='Cerrar'
+            >
+              ×
+            </button>
+            <h2 className='text-xl font-bold mb-4'>
+              Importar alumnos desde CSV
+            </h2>
+            <p className='mb-2 text-sm text-gray-600'>
+              Descarga la plantilla, complétala y súbela aquí. Los campos
+              requeridos son:{' '}
+              <b>cedula, nombre_completo, telefono, fecha_registro, estado</b>.
+            </p>
+            <a
+              href='/alumnos_template.csv'
+              download='alumnos_template.csv'
+              className='inline-block mb-4 text-blue-600 underline text-sm'
+            >
+              Descargar plantilla CSV
+            </a>
+            <input
+              type='file'
+              accept='.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'
+              onChange={handleImportFile}
+              className='block w-full mb-4 border border-gray-200 rounded p-2'
+              disabled={importLoading}
+            />
+            <div className='text-xs text-gray-500 mb-2'>
+              Puedes subir archivos en formato CSV o Excel (.xlsx).
+            </div>
+            {importLoading && (
+              <div className='text-blue-600 mb-2'>Importando...</div>
+            )}
+            {importError && (
+              <div className='text-red-600 mb-2 whitespace-pre-line'>
+                {importError}
+              </div>
+            )}
+            {importSuccess && (
+              <div className='text-green-600 mb-2'>{importSuccess}</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

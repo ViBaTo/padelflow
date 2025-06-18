@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useStore } from '../../lib/store'
-import { auth } from '../../lib/supabase'
+import { supabase, auth } from '../../lib/supabase'
 import logo from '../../assets/images/logo.png'
 
-export function Login() {
+export function Register() {
   const navigate = useNavigate()
   const { setUser, setSession } = useStore()
   const [error, setError] = useState(null)
@@ -18,22 +18,42 @@ export function Login() {
   } = useForm()
 
   const onSubmit = async (data) => {
+    setIsLoading(true)
+    setError(null)
     try {
-      setIsLoading(true)
-      setError(null)
-
-      const { data: authData, error: authError } = await auth.signIn(
-        data.email,
-        data.password
-      )
-
-      if (authError) throw authError
-
-      setUser(authData.user)
-      setSession(authData.session)
+      // 1. Crear usuario en Supabase Auth
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email: data.email,
+          password: data.password
+        })
+      if (signUpError) throw signUpError
+      const user = signUpData.user
+      const session = signUpData.session
+      if (!user) throw new Error('No se pudo crear el usuario.')
+      // 2. Insertar en tabla usuarios
+      const { error: dbError } = await supabase.from('usuarios').insert([
+        {
+          auth_user_id: user.id,
+          nombre_completo: data.nombre_completo,
+          telefono: data.telefono,
+          rol: 'ADMINISTRADOR',
+          estado: 'ACTIVO',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ])
+      if (dbError) {
+        // Si falla, borra el usuario de Auth
+        await supabase.auth.admin.deleteUser(user.id)
+        throw dbError
+      }
+      // 3. Guardar usuario y sesión en store y navegar
+      setUser(user)
+      setSession(session)
       navigate('/')
-    } catch (error) {
-      setError(error.message)
+    } catch (err) {
+      setError(err.message || 'Error al registrar usuario')
     } finally {
       setIsLoading(false)
     }
@@ -57,7 +77,7 @@ export function Login() {
           </div>
           <div className='p-6 space-y-4 md:space-y-6 sm:p-8'>
             <h1 className='text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white'>
-              Sign in to your account
+              Crear cuenta
             </h1>
             <form
               className='space-y-4 md:space-y-6'
@@ -73,11 +93,10 @@ export function Login() {
                   htmlFor='email'
                   className='block mb-2 text-sm font-medium text-gray-900 dark:text-white'
                 >
-                  Your email
+                  Email
                 </label>
                 <input
                   type='email'
-                  name='email'
                   id='email'
                   className='bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
                   placeholder='name@company.com'
@@ -101,11 +120,10 @@ export function Login() {
                   htmlFor='password'
                   className='block mb-2 text-sm font-medium text-gray-900 dark:text-white'
                 >
-                  Password
+                  Contraseña
                 </label>
                 <input
                   type='password'
-                  name='password'
                   id='password'
                   placeholder='••••••••'
                   className='bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
@@ -124,53 +142,71 @@ export function Login() {
                   </p>
                 )}
               </div>
-              <div className='flex items-center justify-between'>
-                <div className='flex items-start'>
-                  <div className='flex items-center h-5'>
-                    <input
-                      id='remember'
-                      aria-describedby='remember'
-                      type='checkbox'
-                      className='w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-primary-600 dark:ring-offset-gray-800'
-                    />
-                  </div>
-                  <div className='ml-3 text-sm'>
-                    <label
-                      htmlFor='remember'
-                      className='text-gray-500 dark:text-gray-300'
-                    >
-                      Remember me
-                    </label>
-                  </div>
-                </div>
-                <a
-                  href='#'
-                  className='text-sm font-medium text-primary-600 hover:underline dark:text-primary-500'
+              <div>
+                <label
+                  htmlFor='nombre_completo'
+                  className='block mb-2 text-sm font-medium text-gray-900 dark:text-white'
                 >
-                  Forgot password?
-                </a>
+                  Nombre completo
+                </label>
+                <input
+                  type='text'
+                  id='nombre_completo'
+                  className='bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+                  placeholder='Nombre completo'
+                  required
+                  {...register('nombre_completo', {
+                    required: 'El nombre es requerido'
+                  })}
+                />
+                {errors.nombre_completo && (
+                  <p className='mt-1 text-sm text-red-500'>
+                    {errors.nombre_completo.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor='telefono'
+                  className='block mb-2 text-sm font-medium text-gray-900 dark:text-white'
+                >
+                  Teléfono
+                </label>
+                <input
+                  type='text'
+                  id='telefono'
+                  className='bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+                  placeholder='Teléfono'
+                  required
+                  {...register('telefono', {
+                    required: 'El teléfono es requerido'
+                  })}
+                />
+                {errors.telefono && (
+                  <p className='mt-1 text-sm text-red-500'>
+                    {errors.telefono.message}
+                  </p>
+                )}
               </div>
               <button
                 type='submit'
-                className='w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800'
+                className='w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800'
+                disabled={isLoading}
               >
                 {isLoading ? (
                   <div className='w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto' />
                 ) : (
-                  'Sign in'
+                  'Crear cuenta'
                 )}
               </button>
-              <button className='w-full mt-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded'>
-                Entrar
-              </button>
               <p className='text-sm font-light text-gray-500 dark:text-gray-400'>
-                Don't have an account yet?{' '}
-                <Link
-                  to='/register'
+                ¿Ya tienes una cuenta?{' '}
+                <a
+                  href='/login'
                   className='font-medium text-primary-600 hover:underline dark:text-primary-500'
                 >
-                  Sign up
-                </Link>
+                  Inicia sesión
+                </a>
               </p>
             </form>
           </div>

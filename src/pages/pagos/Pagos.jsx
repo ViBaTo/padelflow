@@ -87,7 +87,13 @@ export function Pagos() {
   const pendientes = totalInscripciones - pagadas
   const totalIngresos = inscripciones
     .filter((i) => i.pagado)
-    .reduce((sum, i) => sum + (i.precio_pagado || 0), 0)
+    .reduce((sum, i) => {
+      const paquete = paquetes.find((p) => p.codigo === i.codigo_paquete)
+      const totalPaquete = paquete
+        ? paquete.precio_con_iva * paquete.numero_clases
+        : 0
+      return sum + totalPaquete
+    }, 0)
   const conComprobante = inscripciones.filter((i) => i.comprobante).length
 
   // Actualizar modo de pago
@@ -95,11 +101,25 @@ export function Pagos() {
     setSavingId(id)
     await supabase
       .from('inscripciones')
-      .update({ modo_pago: value, updated_at: new Date().toISOString() })
+      .update({
+        modo_pago: value,
+        pagado: !!value,
+        updated_at: new Date().toISOString()
+      })
       .eq('id_inscripcion', id)
-    // Refrescar datos
-    const { data } = await supabase.from('inscripciones').select('*')
-    setInscripciones(data || [])
+    // Actualiza solo el elemento modificado en el estado local
+    setInscripciones((prev) =>
+      prev.map((insc) =>
+        insc.id_inscripcion === id
+          ? {
+              ...insc,
+              modo_pago: value,
+              pagado: !!value,
+              updated_at: new Date().toISOString()
+            }
+          : insc
+      )
+    )
     setSavingId(null)
   }
 
@@ -120,42 +140,24 @@ export function Pagos() {
   const handleComprobanteUpload = async (id, file) => {
     if (!file) return
     setSavingId(id)
-
     try {
-      console.log('Iniciando subida de archivo:', file.name)
-
       const ext = file.name.split('.').pop()
       const filePath = `${id}_${Date.now()}.${ext}`
-
-      console.log('Subiendo archivo a:', filePath)
-
       const { error: uploadError } = await uploadFile(
         'comprobantes',
         filePath,
         file
       )
-
       if (uploadError) {
-        console.error('Error al subir archivo:', uploadError)
         alert('Error al subir comprobante: ' + uploadError.message)
         setSavingId(null)
         return
       }
-
-      console.log('Archivo subido exitosamente')
-
-      // Actualizar la base de datos con el path del archivo
-      const { data: updateData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('inscripciones')
-        .update({
-          comprobante: filePath, // Guardar solo el path, no la URL completa
-          updated_at: new Date().toISOString()
-        })
+        .update({ comprobante: filePath, updated_at: new Date().toISOString() })
         .eq('id_inscripcion', id)
-        .select()
-
       if (updateError) {
-        console.error('Error al actualizar base de datos:', updateError)
         alert(
           'Error al actualizar comprobante en la base de datos: ' +
             updateError.message
@@ -163,23 +165,19 @@ export function Pagos() {
         setSavingId(null)
         return
       }
-
-      console.log('Base de datos actualizada:', updateData)
-
-      // Refrescar datos
-      const { data, error: refreshError } = await supabase
-        .from('inscripciones')
-        .select('*')
-
-      if (refreshError) {
-        console.error('Error al refrescar datos:', refreshError)
-        alert('Error al refrescar datos: ' + refreshError.message)
-      } else {
-        setInscripciones(data || [])
-        console.log('Datos refrescados exitosamente')
-      }
+      // Actualiza solo el elemento modificado en el estado local
+      setInscripciones((prev) =>
+        prev.map((insc) =>
+          insc.id_inscripcion === id
+            ? {
+                ...insc,
+                comprobante: filePath,
+                updated_at: new Date().toISOString()
+              }
+            : insc
+        )
+      )
     } catch (error) {
-      console.error('Error general:', error)
       alert('Error inesperado: ' + error.message)
     } finally {
       setSavingId(null)
@@ -189,55 +187,34 @@ export function Pagos() {
   // Eliminar comprobante
   const handleDeleteComprobante = async (id, currentComprobante) => {
     if (!currentComprobante) return
-
     if (!confirm('¿Estás seguro de que quieres eliminar este comprobante?')) {
       return
     }
-
     setSavingId(id)
-
     try {
-      // Eliminar archivo del storage
-      const { error: deleteError } = await deleteFile(
-        'comprobantes',
-        currentComprobante
-      )
-
-      if (deleteError) {
-        console.error('Error al eliminar archivo:', deleteError)
-        // Continuar con la limpieza de la base de datos aunque falle la eliminación del archivo
-      }
-
-      // Limpiar referencia en la base de datos
+      await deleteFile('comprobantes', currentComprobante)
       const { error: updateError } = await supabase
         .from('inscripciones')
-        .update({
-          comprobante: null,
-          updated_at: new Date().toISOString()
-        })
+        .update({ comprobante: null, updated_at: new Date().toISOString() })
         .eq('id_inscripcion', id)
-
       if (updateError) {
-        console.error('Error al actualizar base de datos:', updateError)
         alert('Error al eliminar comprobante: ' + updateError.message)
         setSavingId(null)
         return
       }
-
-      // Refrescar datos
-      const { data, error: refreshError } = await supabase
-        .from('inscripciones')
-        .select('*')
-
-      if (refreshError) {
-        console.error('Error al refrescar datos:', refreshError)
-        alert('Error al refrescar datos: ' + refreshError.message)
-      } else {
-        setInscripciones(data || [])
-        console.log('Comprobante eliminado exitosamente')
-      }
+      // Actualiza solo el elemento modificado en el estado local
+      setInscripciones((prev) =>
+        prev.map((insc) =>
+          insc.id_inscripcion === id
+            ? {
+                ...insc,
+                comprobante: null,
+                updated_at: new Date().toISOString()
+              }
+            : insc
+        )
+      )
     } catch (error) {
-      console.error('Error general:', error)
       alert('Error inesperado: ' + error.message)
     } finally {
       setSavingId(null)
@@ -282,12 +259,14 @@ export function Pagos() {
   }
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-8 p-6 bg-gray-50'>
       {/* Header */}
-      <div className='flex justify-between items-center'>
+      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
         <div>
-          <h1 className='text-3xl font-bold text-gray-900'>Pagos</h1>
-          <p className='text-gray-600 mt-1'>
+          <h1 className='text-3xl font-extrabold text-gray-900 tracking-tight'>
+            Pagos
+          </h1>
+          <p className='text-gray-500 mt-1 text-base'>
             Gestiona los pagos e inscripciones del club
           </p>
         </div>
@@ -295,100 +274,109 @@ export function Pagos() {
 
       {/* Stats Cards */}
       <div className='grid grid-cols-1 md:grid-cols-4 gap-6'>
-        <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
+        <div className='bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
           <div className='flex items-center justify-between'>
             <span className='text-sm font-medium text-gray-600'>
               Total Inscripciones
             </span>
-            <FileText className='h-4 w-4 text-blue-600' />
+            <FileText className='h-5 w-5 text-blue-600' />
           </div>
-          <div className='text-2xl font-bold text-gray-900'>
+          <div className='text-3xl font-bold text-gray-900'>
             {totalInscripciones}
           </div>
-          <p className='text-xs text-gray-500 mt-1'>
+          <p className='text-xs text-gray-400 mt-1'>
             Registradas en el sistema
           </p>
         </div>
-        <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
+        <div className='bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
           <div className='flex items-center justify-between'>
             <span className='text-sm font-medium text-gray-600'>Pagadas</span>
-            <DollarSign className='h-4 w-4 text-green-600' />
+            <DollarSign className='h-5 w-5 text-green-600' />
           </div>
-          <div className='text-2xl font-bold text-gray-900'>{pagadas}</div>
-          <p className='text-xs text-gray-500 mt-1'>Completadas</p>
+          <div className='text-3xl font-bold text-gray-900'>{pagadas}</div>
+          <p className='text-xs text-gray-400 mt-1'>Completadas</p>
         </div>
-        <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
+        <div className='bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
           <div className='flex items-center justify-between'>
             <span className='text-sm font-medium text-gray-600'>
               Pendientes
             </span>
-            <CreditCard className='h-4 w-4 text-red-600' />
+            <CreditCard className='h-5 w-5 text-red-600' />
           </div>
-          <div className='text-2xl font-bold text-gray-900'>{pendientes}</div>
-          <p className='text-xs text-gray-500 mt-1'>Por procesar</p>
+          <div className='text-3xl font-bold text-gray-900'>{pendientes}</div>
+          <p className='text-xs text-gray-400 mt-1'>Por procesar</p>
         </div>
-        <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
+        <div className='bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
           <div className='flex items-center justify-between'>
             <span className='text-sm font-medium text-gray-600'>
               Ingresos Totales
             </span>
-            <DollarSign className='h-4 w-4 text-green-600' />
+            <DollarSign className='h-5 w-5 text-green-600' />
           </div>
-          <div className='text-2xl font-bold text-gray-900'>
+          <div className='text-3xl font-bold text-gray-900'>
             ${totalIngresos.toLocaleString()}
           </div>
-          <p className='text-xs text-gray-500 mt-1'>Recaudado</p>
+          <p className='text-xs text-gray-400 mt-1'>Recaudado</p>
         </div>
       </div>
 
       {/* Filtros y búsqueda */}
-      <div className='bg-white rounded-xl border border-gray-200 p-6 shadow-sm'>
-        <div className='flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6'>
-          <h2 className='text-lg font-semibold text-gray-900'>
-            Lista de Pagos
-          </h2>
-          <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto justify-end ml-auto'>
-            <div className='relative'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
-              <input
-                type='text'
-                placeholder='Buscar por alumno o paquete...'
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className='pl-10 border border-gray-200 rounded-lg py-2 w-full sm:w-64 text-sm focus:ring-2 focus:ring-blue-100 focus:outline-none focus:border-blue-300 transition-colors'
-              />
-            </div>
-            <div className='relative'>
-              <button
-                className='flex items-center border border-gray-200 px-4 py-2 rounded-lg text-gray-700 bg-white text-sm font-medium hover:bg-gray-50 hover:border-gray-300 transition-colors'
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                type='button'
-              >
-                <Filter className='w-4 h-4 mr-2' />
-                Filtros
-              </button>
-              {showFilterDropdown && (
-                <div className='absolute right-0 mt-2 w-40 bg-white border rounded-xl shadow-lg z-10 p-3'>
-                  <label className='block text-xs font-semibold mb-1 text-gray-700'>
-                    Estado de Pago
-                  </label>
-                  <select
-                    value={filterPagado}
-                    onChange={(e) => setFilterPagado(e.target.value)}
-                    className='w-full border border-gray-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:outline-none'
-                  >
-                    <option value='TODOS'>Todos</option>
-                    <option value='PAGADO'>Pagado</option>
-                    <option value='PENDIENTE'>Pendiente</option>
-                  </select>
-                </div>
-              )}
-            </div>
+      <div className='bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
+        <h2 className='text-lg font-semibold text-gray-900 mb-2 md:mb-0'>
+          Lista de Pagos
+        </h2>
+        <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto justify-end ml-auto'>
+          <div className='relative w-full sm:w-auto'>
+            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
+            <input
+              type='text'
+              placeholder='Buscar por alumno o paquete...'
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className='pl-10 border border-gray-200 rounded-lg py-2 w-full sm:w-64 text-sm focus:ring-2 focus:ring-blue-100 focus:outline-none focus:border-blue-300 transition-colors bg-gray-50'
+            />
+          </div>
+          <div className='flex gap-2'>
+            <button
+              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors focus:outline-none ${
+                filterPagado === 'PAGADO'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+              }`}
+              onClick={() => setFilterPagado('PAGADO')}
+            >
+              Pagado
+            </button>
+            <button
+              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors focus:outline-none ${
+                filterPagado === 'PENDIENTE'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+              }`}
+              onClick={() => setFilterPagado('PENDIENTE')}
+            >
+              Pendiente
+            </button>
+            <button
+              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors focus:outline-none ${
+                filterPagado === 'TODOS'
+                  ? 'bg-blue-100 text-blue-700 border-blue-200'
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+              }`}
+              onClick={() => setFilterPagado('TODOS')}
+            >
+              Todos
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Lista de pagos mejorada */}
-        <div className='space-y-4'>
+      {/* Lista de pagos mejorada */}
+      <div className='bg-white rounded-2xl border border-gray-200 p-0 shadow-sm'>
+        <div
+          className='overflow-y-auto space-y-6 p-6'
+          style={{ maxHeight: '50vh' }}
+        >
           {loading ? (
             <div className='text-center py-12 text-gray-500'>
               <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
@@ -405,158 +393,151 @@ export function Pagos() {
               </p>
             </div>
           ) : (
-            inscripcionesFiltradas.map((insc) => (
-              <div
-                key={insc.id_inscripcion}
-                className='bg-gray-50 rounded-xl border border-gray-200 p-6 hover:shadow-md transition-all duration-200 hover:border-gray-300'
-              >
-                <div className='grid grid-cols-1 lg:grid-cols-12 gap-4 items-center'>
-                  {/* Información del alumno */}
-                  <div className='lg:col-span-3'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center'>
-                        <User className='w-5 h-5 text-blue-600' />
-                      </div>
-                      <div>
-                        <h3 className='font-semibold text-gray-900 text-sm'>
-                          {getAlumnoNombre(insc.cedula_alumno)}
-                        </h3>
-                        <p className='text-xs text-gray-500'>Alumno</p>
-                      </div>
+            inscripcionesFiltradas.map((insc) => {
+              const paquete = paquetes.find(
+                (p) => p.codigo === insc.codigo_paquete
+              )
+              const totalPagar = paquete
+                ? paquete.precio_con_iva * paquete.numero_clases
+                : null
+              return (
+                <div
+                  key={insc.id_inscripcion}
+                  className='bg-gray-50 rounded-xl border border-gray-100 p-6 flex flex-row items-center gap-4 shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300 w-full flex-wrap md:flex-nowrap'
+                >
+                  {/* Alumno */}
+                  <div className='flex items-center gap-3 min-w-[180px] flex-1 truncate'>
+                    <div className='w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center'>
+                      <User className='w-5 h-5 text-blue-600' />
+                    </div>
+                    <div className='truncate'>
+                      <h3 className='font-semibold text-gray-900 text-base truncate'>
+                        {getAlumnoNombre(insc.cedula_alumno)}
+                      </h3>
+                      <p className='text-xs text-gray-500'>Alumno</p>
                     </div>
                   </div>
-
-                  {/* Información del paquete */}
-                  <div className='lg:col-span-3'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center'>
-                        <Package className='w-5 h-5 text-purple-600' />
-                      </div>
-                      <div>
-                        <h3 className='font-semibold text-gray-900 text-sm'>
-                          {getPaqueteNombre(insc.codigo_paquete)}
-                        </h3>
-                        <p className='text-xs text-gray-500'>Paquete</p>
-                      </div>
+                  {/* Paquete */}
+                  <div className='flex items-center gap-3 min-w-[180px] flex-1 truncate'>
+                    <div className='w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center'>
+                      <Package className='w-5 h-5 text-purple-600' />
+                    </div>
+                    <div className='truncate'>
+                      <h3 className='font-semibold text-gray-900 text-base truncate'>
+                        {getPaqueteNombre(insc.codigo_paquete)}
+                      </h3>
+                      <p className='text-xs text-gray-500'>Paquete</p>
                     </div>
                   </div>
-
-                  {/* Precio */}
-                  <div className='lg:col-span-2'>
-                    <div className='text-center'>
-                      <div className='text-lg font-bold text-gray-900'>
-                        {insc.precio_pagado
-                          ? `$${Number(insc.precio_pagado).toLocaleString()}`
-                          : '-'}
-                      </div>
-                      <p className='text-xs text-gray-500'>A pagar</p>
+                  {/* Precio a pagar */}
+                  <div className='flex flex-col items-center min-w-[100px]'>
+                    <div className='text-lg font-bold text-green-600'>
+                      {totalPagar
+                        ? `$${Number(totalPagar).toLocaleString()}`
+                        : '-'}
                     </div>
+                    <p className='text-xs text-gray-500'>A pagar</p>
                   </div>
-
                   {/* Estado de pago */}
-                  <div className='lg:col-span-2'>
-                    <div className='flex flex-col items-center gap-2'>
-                      {getPagadoBadge(insc.pagado)}
-                      <select
-                        className='border border-gray-200 rounded px-2 py-1 text-xs bg-white focus:ring-2 focus:ring-blue-100 focus:outline-none'
-                        value={insc.pagado ? 'si' : 'no'}
-                        onChange={(e) =>
-                          handleUpdatePagado(
-                            insc.id_inscripcion,
-                            e.target.value
-                          )
-                        }
-                        disabled={savingId === insc.id_inscripcion}
-                      >
-                        <option value='si'>Sí</option>
-                        <option value='no'>No</option>
-                      </select>
-                    </div>
+                  <div className='flex flex-col items-center min-w-[120px]'>
+                    {getPagadoBadge(insc.pagado)}
                   </div>
-
                   {/* Modo de pago */}
-                  <div className='lg:col-span-2'>
-                    <div className='flex flex-col items-center gap-2'>
-                      {insc.modo_pago && getModoPagoBadge(insc.modo_pago)}
-                      <select
-                        className='border border-gray-200 rounded px-2 py-1 text-xs bg-white focus:ring-2 focus:ring-blue-100 focus:outline-none'
-                        value={insc.modo_pago || ''}
-                        onChange={(e) =>
-                          handleUpdateModoPago(
-                            insc.id_inscripcion,
-                            e.target.value
-                          )
-                        }
-                        disabled={savingId === insc.id_inscripcion}
-                      >
-                        <option value=''>Selecciona...</option>
-                        {MODOS_PAGO.map((m) => (
-                          <option key={m.value} value={m.value}>
-                            {m.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <div className='flex flex-col items-center min-w-[150px]'>
+                    {insc.modo_pago && getModoPagoBadge(insc.modo_pago)}
+                    <select
+                      className='border border-gray-200 rounded px-2 py-1 text-xs bg-white focus:ring-2 focus:ring-blue-100 focus:outline-none mt-1'
+                      value={insc.modo_pago || ''}
+                      onChange={(e) =>
+                        handleUpdateModoPago(
+                          insc.id_inscripcion,
+                          e.target.value
+                        )
+                      }
+                      disabled={savingId === insc.id_inscripcion}
+                    >
+                      <option value=''>Selecciona...</option>
+                      {MODOS_PAGO.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </div>
-
-                {/* Comprobante */}
-                <div className='mt-4 pt-4 border-t border-gray-200'>
-                  <div className='flex items-center justify-between'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-8 h-8 bg-green-100 rounded-full flex items-center justify-center'>
-                        <FileText className='w-4 h-4 text-green-600' />
-                      </div>
+                  {/* Comprobante y acciones */}
+                  <div className='flex flex-col items-center min-w-[220px]'>
+                    <div className='flex items-center gap-2'>
+                      <FileText className='w-5 h-5 text-green-600' />
                       <span className='text-sm font-medium text-gray-700'>
                         Comprobante
                       </span>
                     </div>
-
                     {savingId === insc.id_inscripcion ? (
                       <div className='text-blue-600 flex items-center gap-2'>
                         <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600'></div>
                         <span className='text-sm'>Procesando...</span>
                       </div>
                     ) : insc.comprobante ? (
-                      <div className='flex items-center gap-3'>
-                        <ComprobanteLink filePath={insc.comprobante} />
-                        <button
-                          onClick={() =>
-                            handleDeleteComprobante(
-                              insc.id_inscripcion,
-                              insc.comprobante
-                            )
-                          }
-                          disabled={savingId === insc.id_inscripcion}
-                          className='flex items-center gap-1 text-red-600 hover:text-red-800 text-xs transition-colors p-1 rounded hover:bg-red-50'
-                        >
-                          <Trash2 className='w-3 h-3' />
-                          Eliminar
-                        </button>
+                      <div className='flex flex-col items-center w-full'>
+                        <div className='flex items-center gap-2'>
+                          <ComprobanteLink filePath={insc.comprobante} />
+                          <button
+                            onClick={() =>
+                              handleDeleteComprobante(
+                                insc.id_inscripcion,
+                                insc.comprobante
+                              )
+                            }
+                            disabled={savingId === insc.id_inscripcion}
+                            className='flex items-center gap-1 text-red-600 hover:text-red-800 text-xs transition-colors p-1 rounded hover:bg-red-50 border border-red-100'
+                          >
+                            <Trash2 className='w-3 h-3' />
+                            Eliminar
+                          </button>
+                        </div>
+                        <span className='text-xs text-gray-400 truncate max-w-[140px] block mt-1'>
+                          {insc.comprobante}
+                        </span>
                       </div>
                     ) : (
-                      <div className='flex items-center gap-3'>
+                      <div className='flex flex-col items-center gap-1 w-full'>
                         <span className='text-gray-400 text-sm'>
                           Sin comprobante
                         </span>
-                        <input
-                          type='file'
-                          accept='.png,.jpg,.jpeg,.pdf'
-                          className='block text-xs border border-gray-200 rounded px-2 py-1 bg-white hover:border-gray-300 transition-colors'
-                          onChange={(e) =>
-                            handleComprobanteUpload(
-                              insc.id_inscripcion,
-                              e.target.files[0]
-                            )
-                          }
-                          disabled={savingId === insc.id_inscripcion}
-                        />
+                        <label className='inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded shadow cursor-pointer hover:bg-blue-700 transition-colors'>
+                          <svg
+                            className='w-4 h-4 mr-1'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                            viewBox='0 0 24 24'
+                          >
+                            <path
+                              strokeLinecap='round'
+                              strokeLinejoin='round'
+                              d='M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12'
+                            />
+                          </svg>
+                          Subir archivo
+                          <input
+                            type='file'
+                            accept='.png,.jpg,.jpeg,.pdf'
+                            className='hidden'
+                            onChange={(e) =>
+                              handleComprobanteUpload(
+                                insc.id_inscripcion,
+                                e.target.files[0]
+                              )
+                            }
+                            disabled={savingId === insc.id_inscripcion}
+                          />
+                        </label>
                       </div>
                     )}
                   </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>

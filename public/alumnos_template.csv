@@ -1,0 +1,3 @@
+cedula,nombre_completo,telefono,fecha_registro,estado
+1234567890,Juan Pérez,0999999999,2024-06-01,ACTIVO
+0987654321,Ana Gómez,0988888888,2024-06-02,INACTIVO 

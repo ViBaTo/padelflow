@@ -12,6 +12,7 @@ import { Paquetes } from './pages/paquetes/Paquetes'
 import { Pagos } from './pages/pagos/Pagos'
 import { Calendario } from './pages/calendario/Calendario'
 import { Configuracion } from './pages/configuracion/Configuracion'
+import { Register } from './pages/auth/Register'
 
 // Componente para rutas protegidas
 function ProtectedRoute({ children }) {
@@ -44,6 +45,7 @@ function App() {
       <Routes>
         {/* Rutas públicas */}
         <Route path='/login' element={<Login />} />
+        <Route path='/register' element={<Register />} />
 
         {/* Rutas protegidas */}
         <Route
