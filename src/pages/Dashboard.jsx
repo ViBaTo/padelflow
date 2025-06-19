@@ -259,14 +259,14 @@ export function Dashboard() {
       : ((ingresosEsteMes - ingresosMesAnterior) / ingresosMesAnterior) * 100
 
   return (
-    <div className='space-y-8 px-2 py-4 sm:px-4 md:px-8 bg-gray-50 overflow-x-hidden'>
+    <div className='space-y-8 px-2 py-4 sm:px-4 md:px-8 bg-gray-50 min-w-0'>
       <div>
         <h1 className='text-3xl font-bold text-gray-900'>Dashboard</h1>
         <p className='text-gray-600 mt-1'>
           Gestión de inscripciones activas a paquetes de clases.
         </p>
       </div>
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6'>
         <DashboardCard
           title='Total Inscripciones'
           value={totalInscripciones}
@@ -292,26 +292,26 @@ export function Dashboard() {
           icon={TrendingUp}
         />
       </div>
-      <div className='bg-white rounded-xl border border-gray-200 p-6 mt-6 w-full'>
+      <div className='bg-white rounded-xl border border-gray-200 p-4 sm:p-6 w-full min-w-0'>
         <h2 className='text-lg font-semibold text-gray-900 mb-4'>
           Ingresos por mes
         </h2>
-        <div style={{ width: '100%', height: 150 }}>
+        <div className='w-full h-48 sm:h-56 lg:h-64 min-w-0'>
           <Line
             data={{
               labels: [
-                'Enero',
-                'Febrero',
-                'Marzo',
-                'Abril',
-                'Mayo',
-                'Junio',
-                'Julio',
-                'Agosto',
-                'Septiembre',
-                'Octubre',
-                'Noviembre',
-                'Diciembre'
+                'Ene',
+                'Feb',
+                'Mar',
+                'Abr',
+                'May',
+                'Jun',
+                'Jul',
+                'Ago',
+                'Sep',
+                'Oct',
+                'Nov',
+                'Dic'
               ],
               datasets: [
                 {
@@ -321,7 +321,8 @@ export function Dashboard() {
                   backgroundColor: 'rgba(37, 99, 235, 0.1)',
                   tension: 0.4,
                   fill: true,
-                  pointRadius: 2,
+                  pointRadius: 3,
+                  pointHoverRadius: 5,
                   pointBackgroundColor: 'rgba(37, 99, 235, 1)',
                   borderWidth: 2
                 }
@@ -332,27 +333,78 @@ export function Dashboard() {
               maintainAspectRatio: false,
               plugins: {
                 legend: { display: false },
-                title: { display: false }
+                title: { display: false },
+                tooltip: {
+                  mode: 'index',
+                  intersect: false,
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  titleColor: 'white',
+                  bodyColor: 'white',
+                  borderColor: 'rgba(37, 99, 235, 1)',
+                  borderWidth: 1,
+                  cornerRadius: 8,
+                  displayColors: false,
+                  callbacks: {
+                    label: function (context) {
+                      return `Ingresos: $${context.parsed.y.toLocaleString()}`
+                    }
+                  }
+                }
               },
               scales: {
-                y: { beginAtZero: true }
+                x: {
+                  beginAtZero: true,
+                  grid: {
+                    display: false
+                  },
+                  ticks: {
+                    maxRotation: 0,
+                    minRotation: 0,
+                    font: {
+                      size: 10
+                    }
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: 'rgba(0, 0, 0, 0.1)'
+                  },
+                  ticks: {
+                    font: {
+                      size: 10
+                    },
+                    callback: function (value) {
+                      return '$' + value.toLocaleString()
+                    }
+                  }
+                }
+              },
+              interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+              },
+              elements: {
+                point: {
+                  hoverRadius: 6
+                }
               }
             }}
-            height={80}
           />
         </div>
       </div>
-      <div className='w-full mt-6'>
-        <Card className='w-full'>
+      <div className='w-full min-w-0'>
+        <Card className='w-full min-w-0'>
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
-              <Package className='w-5 h-5 text-blue-600' />
-              Inscripciones a Paquetes Activos
+              <Package className='w-5 h-5 text-blue-600 flex-shrink-0' />
+              <span className='truncate'>Inscripciones a Paquetes Activos</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div
-              className='space-y-4 overflow-y-auto'
+              className='space-y-4 overflow-y-auto min-w-0'
               style={{ maxHeight: 350 }}
             >
               {activeEnrollments.map((enrollment) => {
@@ -373,7 +425,7 @@ export function Dashboard() {
                 return (
                   <div
                     key={enrollment.id_inscripcion}
-                    className='flex justify-between items-stretch p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-4'
+                    className='flex flex-col sm:flex-row sm:justify-between sm:items-stretch p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 min-w-0'
                   >
                     <div className='flex flex-col flex-1 min-w-0 gap-1'>
                       <div className='text-sm font-semibold text-gray-900 truncate'>
@@ -384,7 +436,7 @@ export function Dashboard() {
                       </div>
                       <div className='flex items-center justify-between text-xs text-gray-600 mt-2 mb-1'>
                         <span>Progreso</span>
-                        <span>
+                        <span className='flex-shrink-0'>
                           {enrollment.clases_utilizadas}/
                           {enrollment.clases_totales} clases
                         </span>
@@ -396,14 +448,14 @@ export function Dashboard() {
                         ></div>
                       </div>
                     </div>
-                    <div className='flex flex-col items-end justify-between min-w-[120px] pl-4'>
-                      <div className='text-xs text-gray-600'>
+                    <div className='flex flex-row sm:flex-col sm:items-end sm:justify-between gap-2 sm:gap-0 sm:min-w-[120px] sm:pl-4'>
+                      <div className='text-xs text-gray-600 flex-shrink-0'>
                         Vence: {formatDate(enrollment.fecha_vencimiento)}
                       </div>
                       <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-2 ${getStatusColor(
+                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
                           status
-                        )}`}
+                        )} flex-shrink-0`}
                       >
                         {status}
                       </span>
