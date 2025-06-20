@@ -11,6 +11,7 @@
 ### **Funcionalidades Implementadas:**
 
 - ✅ **Dashboard** con métricas en tiempo real
+- ✅ **Sistema de registro** y autenticación
 - ✅ **Gestión de alumnos** con importación masiva
 - ✅ **Gestión de profesores** y categorías
 - ✅ **Sistema de paquetes** y precios
@@ -24,6 +25,13 @@
 - **Backend**: Supabase (PostgreSQL)
 - **Autenticación**: Segura y escalable
 - **Hosting**: Listo para producción
+
+### **Acceso al Sistema:**
+
+- **Registro automático**: Los gestores pueden crear cuentas directamente
+- **Acceso inmediato**: Sin verificación por email
+- **Recuperación de contraseñas**: Sistema automático de reset
+- **Múltiples usuarios**: Soporte para varios gestores
 
 ---
 

@@ -13,6 +13,7 @@ import {
 import { StudentDetailsModal } from '../../components/StudentDetailsModal'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
+import { getCategoryColor, getCategoryColorByType } from '../../lib/utils'
 
 export default function Alumnos() {
   const [alumnos, setAlumnos] = useState([])
@@ -231,39 +232,12 @@ export default function Alumnos() {
     )
     const nombre = categoriaObj ? categoriaObj.categoria : categoriaId
 
-    // Asignar colores según el nombre de la categoría
-    const colorMap = {
-      'Hombre - 1': 'bg-blue-100 text-blue-800',
-      'Hombre - 2': 'bg-blue-200 text-blue-900',
-      'Hombre - 3': 'bg-blue-300 text-blue-900',
-      'Hombre - 4': 'bg-blue-400 text-white',
-      'Hombre - 5': 'bg-blue-500 text-white',
-      'Hombre - Principiante': 'bg-cyan-100 text-cyan-800',
-      'Hombre - Intermedio': 'bg-cyan-200 text-cyan-900',
-      'Hombre - Avanzado': 'bg-cyan-300 text-cyan-900',
-      'Mujer - 1': 'bg-pink-100 text-pink-800',
-      'Mujer - 2': 'bg-pink-200 text-pink-900',
-      'Mujer - 3': 'bg-pink-300 text-pink-900',
-      'Mujer - 4': 'bg-pink-400 text-white',
-      'Mujer - 5': 'bg-pink-500 text-white',
-      'Mujer - Principiante': 'bg-fuchsia-100 text-fuchsia-800',
-      'Mujer - Intermedio': 'bg-fuchsia-200 text-fuchsia-900',
-      'Mujer - Avanzado': 'bg-fuchsia-300 text-fuchsia-900',
-      'Niño - 1': 'bg-green-100 text-green-800',
-      'Niño - 2': 'bg-green-200 text-green-900',
-      'Niño - 3': 'bg-green-300 text-green-900',
-      'Niño - 4': 'bg-green-400 text-white',
-      'Niño - 5': 'bg-green-500 text-white',
-      'Niño - Principiante': 'bg-lime-100 text-lime-800',
-      'Niño - Intermedio': 'bg-lime-200 text-lime-900',
-      'Niño - Avanzado': 'bg-lime-300 text-lime-900'
-    }
+    // Usar función inteligente para generar colores basados en el tipo de categoría
+    const colorClass = getCategoryColorByType(nombre)
 
     return (
       <span
-        className={`px-2 py-1 rounded-md text-xs font-medium ${
-          colorMap[nombre] || 'bg-gray-100 text-gray-800'
-        }`}
+        className={`px-2 py-1 rounded-md text-xs font-medium ${colorClass}`}
       >
         {nombre}
       </span>

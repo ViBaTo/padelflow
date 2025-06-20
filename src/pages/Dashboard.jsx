@@ -296,7 +296,7 @@ export function Dashboard() {
         <h2 className='text-lg font-semibold text-gray-900 mb-4'>
           Ingresos por mes
         </h2>
-        <div className='w-full h-48 sm:h-56 lg:h-64 min-w-0'>
+        <div className='w-full h-32 min-w-0'>
           <Line
             data={{
               labels: [
@@ -324,7 +324,7 @@ export function Dashboard() {
                   pointRadius: 3,
                   pointHoverRadius: 5,
                   pointBackgroundColor: 'rgba(37, 99, 235, 1)',
-                  borderWidth: 2
+                  borderWidth: 1
                 }
               ]
             }}
@@ -367,6 +367,8 @@ export function Dashboard() {
                 },
                 y: {
                   beginAtZero: true,
+                  min: 0,
+                  max: 10000,
                   grid: {
                     color: 'rgba(0, 0, 0, 0.1)'
                   },
@@ -386,6 +388,9 @@ export function Dashboard() {
                 intersect: false
               },
               elements: {
+                line: {
+                  borderWidth: 1
+                },
                 point: {
                   hoverRadius: 6
                 }

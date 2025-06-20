@@ -5,10 +5,16 @@
 /* Tus estilos globales personalizados aquí */
 
 /* Cambiar el color de fondo global */
+html,
 body {
-  background-color: #04192f;
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #f9fafb; /* bg-gray-50 */
+  margin: 0;
+  padding: 0;
   @apply font-sans;
-  overflow-x: hidden;
 }
 
 /* Personalizar el scroll */

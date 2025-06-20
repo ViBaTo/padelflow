@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils'
 import { useState, useEffect, useRef } from 'react'
 import { db, supabase } from '../../lib/supabase'
 import { NuevaInscripcionForm } from '../NuevaInscripcionForm'
+import { UserProfileModal } from '../UserProfileModal'
 
 // Subcomponentes
 function MenuButton({ onClick }) {
@@ -60,16 +61,22 @@ function NotificationsButton() {
 }
 
 function UserMenu() {
+  const [open, setOpen] = useState(false)
+  const { user } = useStore()
   return (
-    <div className='relative'>
-      <button className='flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 touch-manipulation'>
+    <>
+      <button
+        className='flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 touch-manipulation'
+        onClick={() => setOpen(true)}
+      >
         <div className='w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center'>
           <span className='text-xs sm:text-sm font-medium text-primary-600 dark:text-primary-400'>
-            U
+            {user?.email?.[0]?.toUpperCase() || 'U'}
           </span>
         </div>
       </button>
-    </div>
+      <UserProfileModal open={open} onClose={() => setOpen(false)} />
+    </>
   )
 }
 

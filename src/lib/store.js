@@ -1,15 +1,18 @@
 import { create } from 'zustand'
 import { auth } from './supabase'
 
-export const useStore = create((set) => ({
+export const useStore = create((set, get) => ({
   // Estado de autenticación
   user: null,
   session: null,
   isLoading: true,
 
   // Estado de la UI
-  isDarkMode: false,
+  isDarkMode: localStorage.getItem('isDarkMode') === 'true',
   sidebarOpen: true,
+
+  // Configuración del club
+  clubConfig: JSON.parse(localStorage.getItem('clubConfig') || '{}'),
 
   // Acciones de autenticación
   setUser: (user) => set({ user }),
@@ -17,8 +20,19 @@ export const useStore = create((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
 
   // Acciones de UI
-  toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
+  toggleDarkMode: () => {
+    const newMode = !get().isDarkMode
+    localStorage.setItem('isDarkMode', newMode.toString())
+    set({ isDarkMode: newMode })
+  },
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+
+  // Acciones de configuración del club
+  updateClubConfig: (config) => {
+    const newConfig = { ...get().clubConfig, ...config }
+    localStorage.setItem('clubConfig', JSON.stringify(newConfig))
+    set({ clubConfig: newConfig })
+  },
 
   // Inicialización
   initialize: async () => {
