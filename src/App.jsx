@@ -3,7 +3,7 @@ import { Layout } from './components/layout/Layout'
 import { useStore } from './lib/store'
 import { useEffect } from 'react'
 import Alumnos from './pages/alumnos/Alumnos'
-import { Analytics } from '@vercel/analytics'
+import { Analytics } from '@vercel/analytics/react'
 
 // Páginas
 import { Login } from './pages/auth/Login'
@@ -42,35 +42,37 @@ function App() {
   }, [initialize])
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Rutas públicas */}
-        <Route path='/login' element={<Login />} />
-        <Route path='/register' element={<Register />} />
+    <div className='main-layout'>
+      <BrowserRouter>
+        <Routes>
+          {/* Rutas públicas */}
+          <Route path='/login' element={<Login />} />
+          <Route path='/register' element={<Register />} />
 
-        {/* Rutas protegidas */}
-        <Route
-          path='/'
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Dashboard />} />
-          <Route path='alumnos' element={<Alumnos />} />
-          <Route path='profesores' element={<Profesores />} />
-          <Route path='paquetes' element={<Paquetes />} />
-          <Route path='pagos' element={<Pagos />} />
-          <Route path='calendario' element={<Calendario />} />
-          <Route path='configuracion' element={<Configuracion />} />
-        </Route>
+          {/* Rutas protegidas */}
+          <Route
+            path='/'
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path='alumnos' element={<Alumnos />} />
+            <Route path='profesores' element={<Profesores />} />
+            <Route path='paquetes' element={<Paquetes />} />
+            <Route path='pagos' element={<Pagos />} />
+            <Route path='calendario' element={<Calendario />} />
+            <Route path='configuracion' element={<Configuracion />} />
+          </Route>
 
-        {/* Ruta por defecto */}
-        <Route path='*' element={<Navigate to='/' replace />} />
-      </Routes>
+          {/* Ruta por defecto */}
+          <Route path='*' element={<Navigate to='/' replace />} />
+        </Routes>
+      </BrowserRouter>
       <Analytics />
-    </BrowserRouter>
+    </div>
   )
 }
 
