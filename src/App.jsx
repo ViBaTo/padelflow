@@ -3,7 +3,6 @@ import { Layout } from './components/layout/Layout'
 import { useStore } from './lib/store'
 import { useEffect } from 'react'
 import Alumnos from './pages/alumnos/Alumnos'
-import { Analytics } from '@vercel/analytics/react'
 
 // Páginas
 import { Login } from './pages/auth/Login'
@@ -71,7 +70,6 @@ function App() {
           <Route path='*' element={<Navigate to='/' replace />} />
         </Routes>
       </BrowserRouter>
-      <Analytics />
     </div>
   )
 }

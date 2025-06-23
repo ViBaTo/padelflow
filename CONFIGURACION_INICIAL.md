@@ -8,18 +8,6 @@ Esta guía te ayudará a configurar el sistema para que esté listo para usar de
 
 La configuración del sistema **solo está disponible en dispositivos de escritorio** (computadoras y laptops). Si intentas acceder desde un móvil, serás redirigido automáticamente al dashboard.
 
-**Dispositivos compatibles:**
-
-- ✅ Computadoras de escritorio
-- ✅ Laptops
-- ✅ Tablets en modo landscape (ancho ≥ 1024px)
-
-**Dispositivos no compatibles:**
-
-- ❌ Teléfonos móviles
-- ❌ Tablets en modo portrait
-- ❌ Dispositivos con pantalla pequeña (< 1024px)
-
 ---
 
 ## 📋 **Paso 1: Acceso y Configuración Básica**
@@ -300,7 +288,7 @@ Si hay alumnos con pagos pendientes:
 Si necesitas ayuda durante la configuración:
 
 1. **Revisa este manual** primero
-2. **Contacta soporte técnico** para ayuda específica
+2. **Contacta con Vicente** para ayuda específica
 3. **No modifiques** configuraciones sin confirmar
 
 ---
@@ -316,5 +304,3 @@ Después de completar la configuración inicial:
 5. **Esperar implementación** de notificaciones y calendario
 
 ---
-
-_¡Con esta configuración, tu sistema estará listo para funcionar al 100%! 🏓_
