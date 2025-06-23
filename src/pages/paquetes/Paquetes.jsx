@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { db } from '../../lib/supabase'
 import { GenericForm } from '../../components/GenericForm'
+import { PaqueteDetailsModal } from '../../components/PaqueteDetailsModal'
 import {
   Package,
   Search,
@@ -27,9 +28,11 @@ export function Paquetes() {
   const [filterTipoServicio, setFilterTipoServicio] = useState('TODOS')
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const recordsPerPage = 5
+  const recordsPerPage = 10
   const contextMenuRef = useRef(null)
   const filterDropdownRef = useRef(null)
+  const [selectedPaquete, setSelectedPaquete] = useState(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
 
   const fetchPaquetes = async () => {
     setLoading(true)
@@ -161,7 +164,7 @@ export function Paquetes() {
   if (error) return <p className='text-red-500'>Error: {error}</p>
 
   return (
-    <div className='flex flex-col flex-1 h-full p-6'>
+    <div className='flex flex-col flex-1 min-h-screen p-6 bg-gray-50'>
       {/* Header e indicadores */}
       <div>
         {/* Header */}
@@ -327,11 +330,14 @@ export function Paquetes() {
                   </td>
                   <td className='px-6 py-4'>
                     <div className='flex space-x-2'>
-                      <button className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'>
+                      <button
+                        className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'
+                        onClick={() => {
+                          setSelectedPaquete(paquete)
+                          setShowDetailModal(true)
+                        }}
+                      >
                         Ver
-                      </button>
-                      <button className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'>
-                        Editar
                       </button>
                     </div>
                   </td>
@@ -400,6 +406,13 @@ export function Paquetes() {
           </li>
         </ul>
       )}
+      {/* Modal de detalle de paquete */}
+      <PaqueteDetailsModal
+        open={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        paquete={selectedPaquete}
+        onDataChange={fetchPaquetes}
+      />
     </div>
   )
 }

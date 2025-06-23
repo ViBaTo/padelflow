@@ -34,7 +34,7 @@ export default function Alumnos() {
   const [filterEstado, setFilterEstado] = useState('TODOS')
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const recordsPerPage = 5
+  const recordsPerPage = 10
   const contextMenuRef = useRef(null)
   const filterDropdownRef = useRef(null)
   const [selectedAlumno, setSelectedAlumno] = useState(null)
@@ -357,7 +357,7 @@ export default function Alumnos() {
   }
 
   return (
-    <div className='flex flex-col flex-1 h-full p-6'>
+    <div className='flex flex-col flex-1 min-h-screen p-6 bg-gray-50'>
       {/* Header e indicadores */}
       <div>
         {/* Header */}
@@ -377,7 +377,7 @@ export default function Alumnos() {
               Nuevo Estudiante
             </button>
             <button
-              className='bg-gray-100 hover:bg-gray-200 text-blue-700 px-5 py-2 rounded-lg font-semibold shadow flex items-center text-sm border border-gray-300'
+              className='hidden md:flex bg-gray-100 hover:bg-gray-200 text-blue-700 px-5 py-2 rounded-lg font-semibold shadow items-center text-sm border border-gray-300'
               onClick={() => setShowImportModal(true)}
             >
               Importar CSV
@@ -616,6 +616,11 @@ export default function Alumnos() {
         inscripciones={inscripciones}
         categorias={categorias}
         profesores={profesores}
+        onDataChange={() => {
+          fetchAlumnos()
+          fetchInscripciones()
+          fetchPaquetes()
+        }}
       />
       {/* Modal de importación de alumnos */}
       {showImportModal && (

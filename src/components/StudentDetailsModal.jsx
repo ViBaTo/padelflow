@@ -24,7 +24,8 @@ export function StudentDetailsModal({
   paquetes = [],
   inscripciones = [],
   categorias = [],
-  profesores = []
+  profesores = [],
+  onDataChange
 }) {
   if (!open || !student) return null
 
@@ -145,8 +146,7 @@ export function StudentDetailsModal({
       if (error) throw error
       setSuccess('Información actualizada correctamente')
       setIsEditing(false)
-      // Recargar la página para actualizar los datos
-      window.location.reload()
+      if (onDataChange) onDataChange()
     } catch (err) {
       setError(err.message)
     }
@@ -161,7 +161,7 @@ export function StudentDetailsModal({
       const { error } = await db.deleteInscripcion(id_inscripcion)
       if (error) throw error
       setSuccess('Paquete eliminado correctamente')
-      window.location.reload()
+      if (onDataChange) onDataChange()
     } catch (err) {
       setError(err.message)
     }
@@ -188,7 +188,7 @@ export function StudentDetailsModal({
         .eq('id_inscripcion', id_inscripcion)
       if (updateError) throw updateError
 
-      window.location.reload()
+      if (onDataChange) onDataChange()
     } catch (err) {
       setError('Error: ' + err.message)
     } finally {
@@ -215,7 +215,7 @@ export function StudentDetailsModal({
       })
       if (error) throw error
       setSuccess('Comprobante eliminado correctamente')
-      window.location.reload()
+      if (onDataChange) onDataChange()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -249,7 +249,7 @@ export function StudentDetailsModal({
       setSuccess('Número de clases actualizado correctamente')
       setEditClasesId(null)
       setEditClasesValue('')
-      window.location.reload()
+      if (onDataChange) onDataChange()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -274,7 +274,7 @@ export function StudentDetailsModal({
       if (error) throw error
       setSuccess('Información actualizada correctamente')
       setEditingField(null)
-      window.location.reload()
+      if (onDataChange) onDataChange()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -829,7 +829,7 @@ export function StudentDetailsModal({
           onClose={() => setShowNewPaqueteModal(false)}
           onSuccess={() => {
             setShowNewPaqueteModal(false)
-            window.location.reload()
+            if (onDataChange) onDataChange()
           }}
           alumnoPreSeleccionado={student}
         />

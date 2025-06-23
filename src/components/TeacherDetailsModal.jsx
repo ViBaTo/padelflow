@@ -18,7 +18,8 @@ export function TeacherDetailsModal({
   teacher,
   inscripciones = [],
   alumnos = [],
-  paquetes = []
+  paquetes = [],
+  onDataChange
 }) {
   if (!open || !teacher) return null
 
@@ -234,8 +235,7 @@ export function TeacherDetailsModal({
       if (error) throw error
       setSuccess('Información actualizada correctamente')
       setIsEditing(false)
-      // Recargar la página para actualizar los datos
-      window.location.reload()
+      if (onDataChange) onDataChange()
     } catch (err) {
       setError(err.message)
     }
@@ -253,7 +253,7 @@ export function TeacherDetailsModal({
       if (error) throw error
       setSuccess('Información actualizada correctamente')
       setEditingField(null)
-      window.location.reload()
+      if (onDataChange) onDataChange()
     } catch (err) {
       setError(err.message)
     } finally {

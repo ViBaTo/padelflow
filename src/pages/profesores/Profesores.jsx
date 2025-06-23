@@ -449,14 +449,17 @@ export function Profesores() {
       {/* Modal de detalles del profesor */}
       <TeacherDetailsModal
         open={showDetailsModal}
-        onClose={() => {
-          setShowDetailsModal(false)
-          setSelectedTeacher(null)
-        }}
+        onClose={() => setShowDetailsModal(false)}
         teacher={selectedTeacher}
         inscripciones={inscripciones}
         alumnos={alumnos}
         paquetes={paquetes}
+        onDataChange={() => {
+          fetchProfesores()
+          fetchInscripciones()
+          fetchAlumnos()
+          fetchPaquetes()
+        }}
       />
     </div>
   )

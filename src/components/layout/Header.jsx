@@ -27,8 +27,8 @@ function NuevaInscripcionButton({ onClick }) {
       onClick={onClick}
     >
       <UserPlus className='w-4 h-4 mr-2' />
-      <span>Nueva inscripción</span>
-      <span className='sm:hidden'>Nueva</span>
+      <span className='md:hidden'>Nueva</span>
+      <span className='hidden md:inline'>Nueva inscripción</span>
     </button>
   )
 }
