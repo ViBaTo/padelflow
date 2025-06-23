@@ -12,6 +12,7 @@
 8. [Seguridad](#seguridad)
 9. [Tema de la Interfaz](#tema-de-la-interfaz)
 10. [Backup y Restauración](#backup-y-restauración)
+11. [Gestión de Paquetes](#gestión-de-paquetes)
 
 ---
 
@@ -22,6 +23,28 @@
 - Navegador web moderno (Chrome, Firefox, Safari, Edge)
 - Conexión a internet
 - Credenciales de acceso al sistema
+- **Dispositivo de escritorio** (la configuración no está disponible en móviles)
+
+### **Restricciones de Dispositivo**
+
+La página de configuración está optimizada para dispositivos de escritorio y **no está disponible en móviles o tablets** por las siguientes razones:
+
+- **Interfaz compleja**: Múltiples pestañas y formularios extensos
+- **Gestión avanzada**: Funciones administrativas que requieren pantalla completa
+- **Experiencia optimizada**: Mejor usabilidad en pantallas grandes
+- **Seguridad**: Acceso restringido a administradores desde dispositivos seguros
+
+**Dispositivos compatibles:**
+
+- ✅ Computadoras de escritorio
+- ✅ Laptops
+- ✅ Tablets en modo landscape (ancho ≥ 1024px)
+
+**Dispositivos no compatibles:**
+
+- ❌ Teléfonos móviles
+- ❌ Tablets en modo portrait
+- ❌ Dispositivos con pantalla pequeña (< 1024px)
 
 ### **Primer Acceso**
 
@@ -92,7 +115,6 @@ Esta información se utiliza en:
 3. Completar formulario:
    - **Nombre**: Nombre de la categoría
    - **Descripción**: Descripción opcional
-   - **Tipo**: Alumno o Profesor
 4. Guardar categoría
 
 ### **Editar Categoría**
@@ -109,21 +131,111 @@ Esta información se utiliza en:
 
 ### **Tipos de Categorías**
 
-- **Alumnos**: Categorías para estudiantes (ej: Principiante, Intermedio, Avanzado)
-- **Profesores**: Categorías para instructores (ej: Instructor, Entrenador, Master)
+- **Alumnos**: Categorías para estudiantes (ej: Principiante, Intermedio, Avanzado, Hombre, Mujer, Niño)
 
 ### **Campos por Categoría**
 
 - **Nombre**: Identificador de la categoría
 - **Descripción**: Información adicional (opcional)
-- **Tipo**: Alumno o Profesor
+- **Tipo**: Automáticamente asignado como "Alumno"
 
 ### **Uso en el Sistema**
 
-- Clasificación automática de usuarios
+- Clasificación automática de alumnos
 - Filtros en reportes
 - Configuración de permisos
 - Organización visual
+
+---
+
+## 👨‍🏫 **Niveles de Profesores**
+
+### **Sistema de Niveles**
+
+Los profesores utilizan un sistema de niveles alfabético:
+
+- **Nivel A**: Profesores de mayor experiencia y certificación
+- **Nivel B**: Profesores con experiencia intermedia
+- **Nivel C**: Profesores con experiencia básica
+- **Nivel D**: Profesores en formación
+
+### **Configuración de Niveles**
+
+1. Al crear o editar un profesor, seleccionar el nivel correspondiente
+2. Los niveles se muestran con colores distintivos:
+   - **Nivel A**: Rojo
+   - **Nivel B**: Naranja
+   - **Nivel C**: Amarillo
+   - **Nivel D**: Verde
+
+### **Uso en el Sistema**
+
+- Clasificación de profesores por experiencia
+- Filtros en reportes de profesores
+- Asignación de responsabilidades
+- Organización visual en listados
+
+---
+
+## 📦 **Gestión de Paquetes**
+
+### **Crear Nuevo Paquete**
+
+1. Ir a **Configuración** → **Paquetes**
+2. Hacer clic en **"Nuevo Paquete"**
+3. Completar formulario:
+   - **Código**: Identificador único del paquete
+   - **Nombre**: Nombre descriptivo del paquete
+   - **Categoría**: Categoría del paquete
+   - **Tipo de servicio**: Academia, Condicionamiento Físico, Clínica, etc.
+   - **Descripción**: Descripción detallada del paquete
+   - **Número de clases**: Cantidad de clases incluidas
+   - **Precio sin IVA**: Precio base del paquete
+   - **Precio con IVA**: Precio final con impuestos
+   - **Estado**: Activo o Inactivo
+4. Guardar paquete
+
+### **Editar Paquete**
+
+1. Hacer clic en el ícono de editar (lápiz)
+2. Modificar campos necesarios
+3. Guardar cambios
+
+### **Eliminar Paquete**
+
+1. Hacer clic en el ícono de eliminar (papelera)
+2. Confirmar eliminación
+3. El paquete se elimina permanentemente
+
+### **Tipos de Servicio Disponibles**
+
+- **ACADEMIA**: Clases de academia de pádel
+- **CONDFIS**: Condicionamiento físico
+- **CLINICA**: Clínicas especializadas
+- **PROFESOR_A**: Clases con profesor nivel A
+- **PROFESOR_B**: Clases con profesor nivel B
+- **INTENSIVO**: Programas intensivos
+- **OTRO**: Otros tipos de servicios
+
+### **Campos del Paquete**
+
+- **Código**: Identificador único (ej: PAQ001)
+- **Nombre**: Nombre descriptivo (ej: "Academia 8 Clases")
+- **Categoría**: Categoría del paquete
+- **Tipo de servicio**: Tipo de actividad
+- **Descripción**: Información detallada
+- **Número de clases**: Cantidad incluida
+- **Precio sin IVA**: Precio base
+- **Precio con IVA**: Precio final
+- **Estado**: Activo/Inactivo
+
+### **Uso en el Sistema**
+
+- Creación de inscripciones
+- Cálculo de precios automático
+- Reportes financieros
+- Gestión de vencimientos
+- Filtros en búsquedas
 
 ---
 

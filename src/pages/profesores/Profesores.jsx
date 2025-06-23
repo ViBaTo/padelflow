@@ -123,7 +123,18 @@ export function Profesores() {
       required: true
     },
     { name: 'telefono', label: 'Teléfono', type: 'text', required: true },
-    { name: 'nivel', label: 'Nivel', type: 'text', required: true },
+    {
+      name: 'nivel',
+      label: 'Nivel',
+      type: 'select',
+      options: [
+        { value: 'A', label: 'Nivel A' },
+        { value: 'B', label: 'Nivel B' },
+        { value: 'C', label: 'Nivel C' },
+        { value: 'D', label: 'Nivel D' }
+      ],
+      required: true
+    },
     { name: 'puede_academia', label: 'Puede academia', type: 'checkbox' },
     {
       name: 'fecha_ingreso',
@@ -163,18 +174,18 @@ export function Profesores() {
   // Badges
   const getNivelBadge = (nivel) => {
     const colors = {
-      INICIACION: 'bg-blue-100 text-blue-800',
-      INTERMEDIO: 'bg-green-100 text-green-800',
-      AVANZADO: 'bg-purple-100 text-purple-800',
-      OTRO: 'bg-gray-100 text-gray-800'
+      A: 'bg-red-100 text-red-800',
+      B: 'bg-orange-100 text-orange-800',
+      C: 'bg-yellow-100 text-yellow-800',
+      D: 'bg-green-100 text-green-800'
     }
     return (
       <span
         className={`px-2 py-1 rounded-full text-xs font-medium ${
-          colors[nivel] || colors['OTRO']
+          colors[nivel] || 'bg-gray-100 text-gray-800'
         }`}
       >
-        {nivel}
+        Nivel {nivel}
       </span>
     )
   }

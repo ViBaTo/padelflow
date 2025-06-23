@@ -4,6 +4,7 @@ import { useStore } from '../../lib/store'
 import { CategoryColorConfig } from '../../components/CategoryColorConfig'
 import { GenericForm } from '../../components/GenericForm'
 import { exportAllTablesAsCSV } from '../../lib/utils'
+import { useNavigate } from 'react-router-dom'
 import {
   Settings,
   Users,
@@ -23,12 +24,16 @@ import {
   Trash2,
   Edit2,
   FileText,
-  Info
+  Info,
+  Package,
+  Monitor,
+  Smartphone
 } from 'lucide-react'
 
 export function Configuracion() {
   const { user, isDarkMode, toggleDarkMode, clubConfig, updateClubConfig } =
     useStore()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('club')
   const [categorias, setCategorias] = useState([])
   const [loading, setLoading] = useState(true)
@@ -36,6 +41,28 @@ export function Configuracion() {
   const [success, setSuccess] = useState(null)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
+  const [showPaqueteModal, setShowPaqueteModal] = useState(false)
+  const [editingPaquete, setEditingPaquete] = useState(null)
+  const [paquetes, setPaquetes] = useState([])
+  const [isDesktop, setIsDesktop] = useState(true)
+
+  // Detectar tipo de dispositivo
+  useEffect(() => {
+    const checkDeviceType = () => {
+      const desktop = window.innerWidth >= 1024
+      setIsDesktop(desktop)
+
+      // Redirigir a móviles al dashboard
+      if (!desktop) {
+        navigate('/', { replace: true })
+      }
+    }
+
+    checkDeviceType()
+    window.addEventListener('resize', checkDeviceType)
+
+    return () => window.removeEventListener('resize', checkDeviceType)
+  }, [navigate])
 
   // Estados para diferentes configuraciones
   const [clubInfo, setClubInfo] = useState({
@@ -78,6 +105,11 @@ export function Configuracion() {
       const { data: cats, error: catError } = await db.getCategorias()
       if (catError) throw catError
       setCategorias(cats || [])
+
+      const { data: pqs, error: pqsError } = await db.getPaquetes()
+      if (pqsError) throw pqsError
+      setPaquetes(pqs || [])
+
       setLoading(false)
     } catch (err) {
       setError('Error al cargar configuración: ' + err.message)
@@ -97,7 +129,9 @@ export function Configuracion() {
 
   const handleAddCategory = async (data) => {
     try {
-      const { error } = await supabase.from('categorias').insert([data])
+      const { error } = await supabase
+        .from('categorias')
+        .insert([{ ...data, tipo: 'alumno' }])
       if (error) throw error
       setShowCategoryModal(false)
       fetchData()
@@ -111,7 +145,7 @@ export function Configuracion() {
     try {
       const { error } = await supabase
         .from('categorias')
-        .update(data)
+        .update({ ...data, tipo: 'alumno' })
         .eq('id_categoria', id)
       if (error) throw error
       setEditingCategory(null)
@@ -138,6 +172,44 @@ export function Configuracion() {
       setSuccess('Categoría eliminada correctamente')
     } catch (err) {
       setError('Error al eliminar categoría: ' + err.message)
+    }
+  }
+
+  const handleAddPaquete = async (data) => {
+    try {
+      const { error } = await db.addPaquete(data)
+      if (error) throw error
+      setShowPaqueteModal(false)
+      fetchData()
+      setSuccess('Paquete creado correctamente')
+    } catch (err) {
+      setError('Error al crear paquete: ' + err.message)
+    }
+  }
+
+  const handleUpdatePaquete = async (codigo, data) => {
+    try {
+      const { error } = await db.updatePaquete(codigo, data)
+      if (error) throw error
+      setEditingPaquete(null)
+      fetchData()
+      setSuccess('Paquete actualizado correctamente')
+    } catch (err) {
+      setError('Error al actualizar paquete: ' + err.message)
+    }
+  }
+
+  const handleDeletePaquete = async (codigo) => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este paquete?'))
+      return
+
+    try {
+      const { error } = await db.deletePaquete(codigo)
+      if (error) throw error
+      fetchData()
+      setSuccess('Paquete eliminado correctamente')
+    } catch (err) {
+      setError('Error al eliminar paquete: ' + err.message)
     }
   }
 
@@ -191,16 +263,6 @@ export function Configuracion() {
       label: 'Descripción',
       type: 'text',
       required: false
-    },
-    {
-      name: 'tipo',
-      label: 'Tipo',
-      type: 'select',
-      options: [
-        { value: 'alumno', label: 'Alumno' },
-        { value: 'profesor', label: 'Profesor' }
-      ],
-      required: true
     }
   ]
 
@@ -225,9 +287,80 @@ export function Configuracion() {
     }
   ]
 
+  const paqueteFields = [
+    {
+      name: 'codigo',
+      label: 'Código del paquete',
+      type: 'text',
+      required: true
+    },
+    {
+      name: 'nombre',
+      label: 'Nombre del paquete',
+      type: 'text',
+      required: true
+    },
+    {
+      name: 'categoria',
+      label: 'Categoría',
+      type: 'text',
+      required: true
+    },
+    {
+      name: 'tipo_servicio',
+      label: 'Tipo de servicio',
+      type: 'select',
+      options: [
+        { value: 'ACADEMIA', label: 'Academia' },
+        { value: 'CONDFIS', label: 'Condicionamiento Físico' },
+        { value: 'CLINICA', label: 'Clínica' },
+        { value: 'PROFESOR_A', label: 'Profesor A' },
+        { value: 'PROFESOR_B', label: 'Profesor B' },
+        { value: 'INTENSIVO', label: 'Intensivo' },
+        { value: 'OTRO', label: 'Otro' }
+      ],
+      required: true
+    },
+    {
+      name: 'descripcion',
+      label: 'Descripción',
+      type: 'text',
+      required: true
+    },
+    {
+      name: 'numero_clases',
+      label: 'Número de clases',
+      type: 'number',
+      required: true
+    },
+    {
+      name: 'precio',
+      label: 'Precio sin IVA',
+      type: 'number',
+      required: true
+    },
+    {
+      name: 'precio_con_iva',
+      label: 'Precio con IVA',
+      type: 'number',
+      required: true
+    },
+    {
+      name: 'estado',
+      label: 'Estado',
+      type: 'select',
+      options: [
+        { value: 'ACTIVO', label: 'Activo' },
+        { value: 'INACTIVO', label: 'Inactivo' }
+      ],
+      required: true
+    }
+  ]
+
   const tabs = [
     { id: 'club', label: 'Club', icon: Building },
     { id: 'categorias', label: 'Categorías', icon: Users },
+    { id: 'paquetes', label: 'Paquetes', icon: Package },
     { id: 'colores', label: 'Colores', icon: Palette },
     { id: 'pagos', label: 'Pagos', icon: CreditCard },
     { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
@@ -239,6 +372,43 @@ export function Configuracion() {
     return (
       <div className='flex items-center justify-center min-h-screen'>
         <div className='w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin' />
+      </div>
+    )
+  }
+
+  // Mostrar mensaje si no es desktop
+  if (!isDesktop) {
+    return (
+      <div className='flex flex-col items-center justify-center min-h-screen p-6 text-center'>
+        <div className='max-w-md'>
+          <div className='flex justify-center mb-6'>
+            <div className='p-4 bg-blue-100 rounded-full'>
+              <Smartphone className='w-12 h-12 text-blue-600' />
+            </div>
+          </div>
+          <h1 className='text-2xl font-bold text-gray-900 dark:text-white mb-4'>
+            Configuración Solo Disponible en Escritorio
+          </h1>
+          <p className='text-gray-600 dark:text-gray-400 mb-6'>
+            La página de configuración está optimizada para dispositivos de
+            escritorio para brindarte la mejor experiencia de gestión del
+            sistema.
+          </p>
+          <div className='bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6'>
+            <div className='flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400'>
+              <Monitor className='w-4 h-4' />
+              <span>
+                Accede desde tu computadora para gestionar la configuración
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/')}
+            className='px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors'
+          >
+            Volver al Dashboard
+          </button>
+        </div>
       </div>
     )
   }
@@ -394,7 +564,7 @@ export function Configuracion() {
           <div className='space-y-6'>
             <div className='flex justify-between items-center'>
               <h3 className='text-lg font-semibold text-gray-900 dark:text-white'>
-                Categorías de Alumnos y Profesores
+                Categorías de Alumnos
               </h3>
               <button
                 onClick={() => setShowCategoryModal(true)}
@@ -435,15 +605,6 @@ export function Configuracion() {
                   <p className='text-sm text-gray-600 dark:text-gray-400 mb-2'>
                     {categoria.descripcion || 'Sin descripción'}
                   </p>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      categoria.tipo === 'alumno'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-green-100 text-green-800'
-                    }`}
-                  >
-                    {categoria.tipo === 'alumno' ? 'Alumno' : 'Profesor'}
-                  </span>
                 </div>
               ))}
             </div>
@@ -472,6 +633,120 @@ export function Configuracion() {
                       setEditingCategory(null)
                     }}
                     submitText={editingCategory ? 'Actualizar' : 'Crear'}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Gestión de Paquetes */}
+        {activeTab === 'paquetes' && (
+          <div className='space-y-6'>
+            <div className='flex justify-between items-center'>
+              <h3 className='text-lg font-semibold text-gray-900 dark:text-white'>
+                Gestión de Paquetes
+              </h3>
+              <button
+                onClick={() => setShowPaqueteModal(true)}
+                className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2'
+              >
+                <Plus className='w-4 h-4' />
+                Nuevo Paquete
+              </button>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+              {paquetes.map((paquete) => (
+                <div
+                  key={paquete.codigo}
+                  className='bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4'
+                >
+                  <div className='flex justify-between items-start mb-2'>
+                    <h4 className='font-medium text-gray-900 dark:text-white'>
+                      {paquete.nombre}
+                    </h4>
+                    <div className='flex gap-1'>
+                      <button
+                        onClick={() => setEditingPaquete(paquete)}
+                        className='p-1 text-gray-400 hover:text-blue-600'
+                      >
+                        <Edit2 className='w-4 h-4' />
+                      </button>
+                      <button
+                        onClick={() => handleDeletePaquete(paquete.codigo)}
+                        className='p-1 text-gray-400 hover:text-red-600'
+                      >
+                        <Trash2 className='w-4 h-4' />
+                      </button>
+                    </div>
+                  </div>
+                  <p className='text-sm text-gray-600 dark:text-gray-400 mb-2'>
+                    {paquete.descripcion}
+                  </p>
+                  <div className='space-y-1 text-sm'>
+                    <div className='flex justify-between'>
+                      <span className='text-gray-600 dark:text-gray-400'>
+                        Código:
+                      </span>
+                      <span className='font-medium'>{paquete.codigo}</span>
+                    </div>
+                    <div className='flex justify-between'>
+                      <span className='text-gray-600 dark:text-gray-400'>
+                        Clases:
+                      </span>
+                      <span className='font-medium'>
+                        {paquete.numero_clases}
+                      </span>
+                    </div>
+                    <div className='flex justify-between'>
+                      <span className='text-gray-600 dark:text-gray-400'>
+                        Precio:
+                      </span>
+                      <span className='font-medium text-green-600'>
+                        ${paquete.precio_con_iva}
+                      </span>
+                    </div>
+                    <div className='flex justify-between'>
+                      <span className='text-gray-600 dark:text-gray-400'>
+                        Estado:
+                      </span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          paquete.estado === 'ACTIVO'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {paquete.estado}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Modal para nueva/editar paquete */}
+            {(showPaqueteModal || editingPaquete) && (
+              <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+                <div className='bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto'>
+                  <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-4'>
+                    {editingPaquete ? 'Editar Paquete' : 'Nuevo Paquete'}
+                  </h3>
+                  <GenericForm
+                    fields={paqueteFields}
+                    initialData={editingPaquete || {}}
+                    onSubmit={
+                      editingPaquete
+                        ? (data) =>
+                            handleUpdatePaquete(editingPaquete.codigo, data)
+                        : handleAddPaquete
+                    }
+                    onCancel={() => {
+                      setShowPaqueteModal(false)
+                      setEditingPaquete(null)
+                    }}
+                    submitText={editingPaquete ? 'Actualizar' : 'Crear'}
                   />
                 </div>
               </div>

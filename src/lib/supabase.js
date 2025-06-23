@@ -116,6 +116,14 @@ export const db = {
     return { data, error }
   },
 
+  updatePaquete: async (codigo, updates) => {
+    const { data, error } = await supabase
+      .from('paquetes')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('codigo', codigo)
+    return { data, error }
+  },
+
   // Precios
   getPrecios: async () => {
     const { data, error } = await supabase.from('precios').select('*')

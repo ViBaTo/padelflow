@@ -12,13 +12,32 @@ import {
 } from 'lucide-react'
 import { useStore } from '../../lib/store'
 import { cn } from '../../lib/utils'
-import { useState, createContext, useContext } from 'react'
+import { useState, createContext, useContext, useEffect } from 'react'
 import logo from '../../assets/images/logo.png'
 
 const SidebarContext = createContext()
 
 export function useSidebar() {
   return useContext(SidebarContext)
+}
+
+// Hook para detectar el tipo de dispositivo
+function useDeviceType() {
+  const [isDesktop, setIsDesktop] = useState(true)
+
+  useEffect(() => {
+    const checkDeviceType = () => {
+      // Consideramos desktop si el ancho es mayor a 1024px (lg breakpoint de Tailwind)
+      setIsDesktop(window.innerWidth >= 1024)
+    }
+
+    checkDeviceType()
+    window.addEventListener('resize', checkDeviceType)
+
+    return () => window.removeEventListener('resize', checkDeviceType)
+  }, [])
+
+  return isDesktop
 }
 
 const navigation = [
@@ -28,7 +47,12 @@ const navigation = [
   { name: 'Paquetes', href: '/paquetes', icon: Package },
   { name: 'Pagos', href: '/pagos', icon: CreditCard },
   { name: 'Calendario', href: '/calendario', icon: Calendar },
-  { name: 'Configuración', href: '/configuracion', icon: Settings }
+  {
+    name: 'Configuración',
+    href: '/configuracion',
+    icon: Settings,
+    desktopOnly: true
+  }
 ]
 
 export function SidebarProvider({ children }) {
@@ -75,10 +99,16 @@ export function Sidebar() {
   const navigate = useNavigate()
   const [showInscripcionModal, setShowInscripcionModal] = useState(false)
   const { open, closeSidebar } = useSidebar()
+  const isDesktop = useDeviceType()
 
   const handleLogout = () => {
     logout(() => navigate('/login'))
   }
+
+  // Filtrar navegación basado en el tipo de dispositivo
+  const filteredNavigation = navigation.filter(
+    (item) => !item.desktopOnly || isDesktop
+  )
 
   // Drawer desde arriba para móvil
   return (
@@ -121,7 +151,7 @@ export function Sidebar() {
                 </button>
               </div>
               <nav className='flex-1 px-2 py-4 space-y-1 overflow-y-auto'>
-                {navigation.map((item) => {
+                {filteredNavigation.map((item) => {
                   const isActive = location.pathname === item.href
                   return (
                     <Link
@@ -167,7 +197,7 @@ export function Sidebar() {
           </span>
         </div>
         <nav className='flex-1 px-2 py-4 space-y-1'>
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = location.pathname === item.href
             return (
               <Link

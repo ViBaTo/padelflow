@@ -37,18 +37,18 @@ export function TeacherDetailsModal({
   // Utilidades para badges
   const getNivelBadge = (nivel) => {
     const colors = {
-      INICIACION: 'bg-blue-100 text-blue-800',
-      INTERMEDIO: 'bg-green-100 text-green-800',
-      AVANZADO: 'bg-purple-100 text-purple-800',
-      OTRO: 'bg-gray-100 text-gray-800'
+      A: 'bg-red-100 text-red-800',
+      B: 'bg-orange-100 text-orange-800',
+      C: 'bg-yellow-100 text-yellow-800',
+      D: 'bg-green-100 text-green-800'
     }
     return (
       <span
         className={`px-2 py-1 rounded-full text-xs font-medium ${
-          colors[nivel] || colors['OTRO']
+          colors[nivel] || 'bg-gray-100 text-gray-800'
         }`}
       >
-        {nivel}
+        Nivel {nivel}
       </span>
     )
   }
@@ -210,9 +210,10 @@ export function TeacherDetailsModal({
       label: 'Nivel',
       type: 'select',
       options: [
-        { value: 'INICIACION', label: 'Iniciación' },
-        { value: 'INTERMEDIO', label: 'Intermedio' },
-        { value: 'AVANZADO', label: 'Avanzado' }
+        { value: 'A', label: 'Nivel A' },
+        { value: 'B', label: 'Nivel B' },
+        { value: 'C', label: 'Nivel C' },
+        { value: 'D', label: 'Nivel D' }
       ],
       required: true
     },
@@ -460,9 +461,10 @@ export function TeacherDetailsModal({
                     className='flex-1 px-3 py-2 border rounded-md'
                     disabled={isSaving}
                   >
-                    <option value='INICIACION'>Iniciación</option>
-                    <option value='INTERMEDIO'>Intermedio</option>
-                    <option value='AVANZADO'>Avanzado</option>
+                    <option value='A'>Nivel A</option>
+                    <option value='B'>Nivel B</option>
+                    <option value='C'>Nivel C</option>
+                    <option value='D'>Nivel D</option>
                   </select>
                   <button
                     onClick={() => handleInlineEdit('nivel', editValue)}

@@ -155,13 +155,26 @@ Si tienes muchos alumnos, usa la importación masiva:
 1. Ve a **"Profesores"** en el menú lateral
 2. Haz clic en **"Nuevo Profesor"**
 3. Completa:
-   - **Cédula**: Número de identificación
+   - **ID Profesor**: Identificador único del profesor
    - **Nombre completo**: Nombre y apellidos
    - **Teléfono**: Número de contacto
-   - **Email**: Correo electrónico
-   - **Categoría**: Nivel de experiencia
-   - **Estado**: ACTIVO o INACTIVO
+   - **Nivel**: Selecciona el nivel (A, B, C, D)
+   - **Puede academia**: Marca si puede dar clases de academia
+   - **Fecha ingreso**: Fecha de incorporación
 4. Haz clic en **"Añadir profesor"**
+
+### **Sistema de Niveles**
+
+- **Nivel A**: Profesores de mayor experiencia y certificación
+- **Nivel B**: Profesores con experiencia intermedia
+- **Nivel C**: Profesores con experiencia básica
+- **Nivel D**: Profesores en formación
+
+### **Filtros y Búsqueda**
+
+- **Por nombre**: Busca profesores por nombre
+- **Por teléfono**: Busca por número de contacto
+- **Por nivel**: Filtra por nivel específico (A, B, C, D)
 
 ---
 
@@ -177,11 +190,38 @@ Si tienes muchos alumnos, usa la importación masiva:
 
 ## ⚙️ **Configuración del Sistema**
 
+### **⚠️ Importante: Solo Disponible en Escritorio**
+
+La página de configuración **solo está disponible en dispositivos de escritorio** (computadoras y laptops). Si intentas acceder desde un móvil, serás redirigido automáticamente al dashboard.
+
+**¿Por qué esta restricción?**
+
+- La configuración tiene múltiples pestañas y formularios complejos
+- Se requiere pantalla completa para una gestión eficiente
+- Es una función administrativa que debe realizarse desde dispositivos seguros
+
 ### **Gestión de Categorías**
 
-1. Ve a **"Configuración"** en el menú lateral
+1. Ve a **"Configuración"** en el menú lateral (solo visible en escritorio)
 2. **Categorías**: Define niveles de experiencia (Principiante, Intermedio, Avanzado)
-3. **Configuración general**: Ajustes del sistema
+3. **Paquetes**: Gestiona los paquetes de clases disponibles
+4. **Configuración general**: Ajustes del sistema
+
+### **Gestión de Paquetes desde Configuración**
+
+1. Ve a **"Configuración"** → **"Paquetes"**
+2. **Crear paquete**: Haz clic en "Nuevo Paquete"
+3. **Editar paquete**: Haz clic en el ícono de editar
+4. **Eliminar paquete**: Haz clic en el ícono de eliminar
+
+**Campos importantes:**
+
+- **Código**: Identificador único (ej: PAQ001)
+- **Nombre**: Nombre descriptivo del paquete
+- **Tipo de servicio**: Academia, Condicionamiento Físico, etc.
+- **Número de clases**: Cantidad incluida
+- **Precio con IVA**: Precio final
+- **Estado**: Activo/Inactivo
 
 ---
 

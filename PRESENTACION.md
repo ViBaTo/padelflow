@@ -32,7 +32,7 @@ El sistema ya cuenta con todas las funcionalidades básicas necesarias para la g
 **📦 Gestión de Paquetes**
 
 - Creación de paquetes de clases
-- Precios con y sin IVA
+- Precios
 - Número de clases por paquete
 - Estados activo/inactivo
 
@@ -43,11 +43,6 @@ El sistema ya cuenta con todas las funcionalidades básicas necesarias para la g
 - Fechas de vencimiento
 - Historial de transacciones
 
-**📅 Calendario**
-
-- Vista de horarios y clases
-- Gestión de eventos del club
-
 **⚙️ Configuración**
 
 - Ajustes del sistema
@@ -57,8 +52,12 @@ El sistema ya cuenta con todas las funcionalidades básicas necesarias para la g
 
 ### 🚀 **Roadmap - Evolución a SaaS**
 
-#### **Fase 2: Roles y Permisos (2-3 semanas)**
+#### **Fase 2: Calendario y Roles (2-3 semanas)**
 
+- **📅 Sistema de Calendario**
+  - Vista de horarios y clases
+  - Gestión de eventos del club
+  - Reserva de clases
 - **Sistema de roles**: Administrador, Profesor, Alumno
 - **Permisos granulares** por página y acción
 - **Vistas específicas** para cada tipo de usuario
