@@ -3,7 +3,7 @@ import { Layout } from './components/layout/Layout'
 import { useStore } from './lib/store'
 import { useEffect } from 'react'
 import Alumnos from './pages/alumnos/Alumnos'
-import { Analytics } from '@vercel/analytics/react'
+import { Analytics } from '@vercel/analytics'
 
 // Páginas
 import { Login } from './pages/auth/Login'
