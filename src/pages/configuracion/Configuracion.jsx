@@ -108,10 +108,12 @@ export function Configuracion() {
 
       const { data: pqs, error: pqsError } = await db.getPaquetes()
       if (pqsError) throw pqsError
+      console.log('Paquetes cargados:', pqs)
       setPaquetes(pqs || [])
 
       setLoading(false)
     } catch (err) {
+      console.error('Error en fetchData:', err)
       setError('Error al cargar configuración: ' + err.message)
       setLoading(false)
     }
@@ -177,25 +179,113 @@ export function Configuracion() {
 
   const handleAddPaquete = async (data) => {
     try {
-      const { error } = await db.addPaquete(data)
-      if (error) throw error
+      console.log('Agregando paquete:', data)
+      setError(null) // Limpiar errores previos
+
+      // Limpiar y validar datos
+      const cleanedData = {
+        codigo: data.codigo?.toString().trim(),
+        nombre: data.nombre?.toString().trim(),
+        categoria: data.categoria?.toString().trim(),
+        tipo_servicio: data.tipo_servicio?.toString().trim(),
+        descripcion: data.descripcion?.toString().trim(),
+        numero_clases: parseInt(data.numero_clases) || 0,
+        precio: parseFloat(data.precio) || 0,
+        precio_con_iva: parseFloat(data.precio_con_iva) || 0,
+        estado: data.estado?.toString().trim()
+      }
+
+      // Validar que todos los campos requeridos estén presentes
+      const requiredFields = [
+        'codigo',
+        'nombre',
+        'categoria',
+        'tipo_servicio',
+        'descripcion',
+        'numero_clases',
+        'precio',
+        'precio_con_iva',
+        'estado'
+      ]
+      const missingFields = requiredFields.filter(
+        (field) => !cleanedData[field]
+      )
+
+      if (missingFields.length > 0) {
+        throw new Error(`Campos faltantes: ${missingFields.join(', ')}`)
+      }
+
+      console.log('Datos limpios para agregar:', cleanedData)
+      const { error } = await db.addPaquete(cleanedData)
+      if (error) {
+        console.error('Error en addPaquete:', error)
+        throw error
+      }
+      console.log('Paquete agregado exitosamente')
       setShowPaqueteModal(false)
       fetchData()
       setSuccess('Paquete creado correctamente')
+      setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
+      console.error('Error completo:', err)
       setError('Error al crear paquete: ' + err.message)
+      setTimeout(() => setError(null), 5000)
     }
   }
 
   const handleUpdatePaquete = async (codigo, data) => {
     try {
-      const { error } = await db.updatePaquete(codigo, data)
-      if (error) throw error
+      console.log('Actualizando paquete:', { codigo, data })
+      setError(null) // Limpiar errores previos
+
+      // Limpiar y validar datos
+      const cleanedData = {
+        codigo: data.codigo?.toString().trim(),
+        nombre: data.nombre?.toString().trim(),
+        categoria: data.categoria?.toString().trim(),
+        tipo_servicio: data.tipo_servicio?.toString().trim(),
+        descripcion: data.descripcion?.toString().trim(),
+        numero_clases: parseInt(data.numero_clases) || 0,
+        precio: parseFloat(data.precio) || 0,
+        precio_con_iva: parseFloat(data.precio_con_iva) || 0,
+        estado: data.estado?.toString().trim()
+      }
+
+      // Validar que todos los campos requeridos estén presentes
+      const requiredFields = [
+        'codigo',
+        'nombre',
+        'categoria',
+        'tipo_servicio',
+        'descripcion',
+        'numero_clases',
+        'precio',
+        'precio_con_iva',
+        'estado'
+      ]
+      const missingFields = requiredFields.filter(
+        (field) => !cleanedData[field]
+      )
+
+      if (missingFields.length > 0) {
+        throw new Error(`Campos faltantes: ${missingFields.join(', ')}`)
+      }
+
+      console.log('Datos limpios:', cleanedData)
+      const { error } = await db.updatePaquete(codigo, cleanedData)
+      if (error) {
+        console.error('Error en updatePaquete:', error)
+        throw error
+      }
+      console.log('Paquete actualizado exitosamente')
       setEditingPaquete(null)
       fetchData()
       setSuccess('Paquete actualizado correctamente')
+      setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
+      console.error('Error completo:', err)
       setError('Error al actualizar paquete: ' + err.message)
+      setTimeout(() => setError(null), 5000)
     }
   }
 
@@ -210,6 +300,23 @@ export function Configuracion() {
       setSuccess('Paquete eliminado correctamente')
     } catch (err) {
       setError('Error al eliminar paquete: ' + err.message)
+    }
+  }
+
+  // Función para cerrar modales
+  const closeModals = () => {
+    console.log('Cerrando modales')
+    setShowCategoryModal(false)
+    setEditingCategory(null)
+    setShowPaqueteModal(false)
+    setEditingPaquete(null)
+  }
+
+  // Manejador de clic en overlay
+  const handleOverlayClick = (e) => {
+    console.log('Overlay click:', e.target === e.currentTarget)
+    if (e.target === e.currentTarget) {
+      closeModals()
     }
   }
 
@@ -356,6 +463,8 @@ export function Configuracion() {
       required: true
     }
   ]
+
+  console.log('Campos de paquete definidos:', paqueteFields)
 
   const tabs = [
     { id: 'club', label: 'Club', icon: Building },
@@ -611,14 +720,17 @@ export function Configuracion() {
 
             {/* Modal para nueva/editar categoría */}
             {(showCategoryModal || editingCategory) && (
-              <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+              <div
+                className='fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]'
+                onClick={handleOverlayClick}
+              >
                 <div className='bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md'>
                   <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-4'>
                     {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
                   </h3>
                   <GenericForm
                     fields={categoryFields}
-                    initialData={editingCategory || {}}
+                    initialValues={editingCategory || {}}
                     onSubmit={
                       editingCategory
                         ? (data) =>
@@ -628,10 +740,7 @@ export function Configuracion() {
                             )
                         : handleAddCategory
                     }
-                    onCancel={() => {
-                      setShowCategoryModal(false)
-                      setEditingCategory(null)
-                    }}
+                    onCancel={closeModals}
                     submitText={editingCategory ? 'Actualizar' : 'Crear'}
                   />
                 </div>
@@ -668,7 +777,10 @@ export function Configuracion() {
                     </h4>
                     <div className='flex gap-1'>
                       <button
-                        onClick={() => setEditingPaquete(paquete)}
+                        onClick={() => {
+                          console.log('Editando paquete:', paquete)
+                          setEditingPaquete(paquete)
+                        }}
                         className='p-1 text-gray-400 hover:text-blue-600'
                       >
                         <Edit2 className='w-4 h-4' />
@@ -728,23 +840,38 @@ export function Configuracion() {
 
             {/* Modal para nueva/editar paquete */}
             {(showPaqueteModal || editingPaquete) && (
-              <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+              <div
+                className='fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]'
+                onClick={handleOverlayClick}
+              >
+                {console.log('Renderizando modal de paquete:', {
+                  showPaqueteModal,
+                  editingPaquete
+                })}
                 <div className='bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto'>
                   <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-4'>
                     {editingPaquete ? 'Editar Paquete' : 'Nuevo Paquete'}
                   </h3>
                   <GenericForm
                     fields={paqueteFields}
-                    initialData={editingPaquete || {}}
+                    initialValues={editingPaquete || {}}
                     onSubmit={
                       editingPaquete
-                        ? (data) =>
+                        ? (data) => {
+                            console.log(
+                              'Enviando datos de actualización:',
+                              data
+                            )
                             handleUpdatePaquete(editingPaquete.codigo, data)
-                        : handleAddPaquete
+                          }
+                        : (data) => {
+                            console.log('Enviando datos de creación:', data)
+                            handleAddPaquete(data)
+                          }
                     }
                     onCancel={() => {
-                      setShowPaqueteModal(false)
-                      setEditingPaquete(null)
+                      console.log('Cancelando formulario')
+                      closeModals()
                     }}
                     submitText={editingPaquete ? 'Actualizar' : 'Crear'}
                   />

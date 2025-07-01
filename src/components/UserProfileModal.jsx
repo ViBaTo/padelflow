@@ -120,7 +120,14 @@ export function UserProfileModal({ open, onClose }) {
   }
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-opacity-600 backdrop-blur-sm'>
+    <div
+      className='fixed inset-0 z-50 flex items-center justify-center bg-opacity-600 backdrop-blur-sm'
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+    >
       <div className='bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-md relative'>
         <button
           className='absolute top-3 right-3 text-gray-400 hover:text-gray-700 dark:hover:text-white text-xl'

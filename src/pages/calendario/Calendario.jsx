@@ -5,7 +5,7 @@ export function Calendario() {
         Calendario
       </h1>
       <p className='text-gray-600 dark:text-gray-400'>
-        Calendario de clases en desarrollo...
+        Calendario de profesores en desarrollo...
       </p>
     </div>
   )

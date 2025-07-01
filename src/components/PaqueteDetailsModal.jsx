@@ -71,7 +71,14 @@ export function PaqueteDetailsModal({ open, onClose, paquete, onDataChange }) {
   }
 
   return (
-    <div className='fixed inset-0 z-50 flex justify-end bg-black/50 transition-opacity duration-300'>
+    <div
+      className='fixed inset-0 z-50 flex justify-end bg-black/50 transition-opacity duration-300'
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+    >
       <div className='relative bg-white h-full w-full max-w-lg border-l border-gray-200 px-8 py-8 overflow-y-auto animate-fade-in-right'>
         <button
           className='absolute top-4 right-6 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'

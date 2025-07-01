@@ -143,7 +143,14 @@ export function NuevaInscripcionForm({
   if (!open) return null
 
   return (
-    <div className='fixed inset-0 z-50 flex justify-center items-center bg-black/40'>
+    <div
+      className='fixed inset-0 z-50 flex justify-center items-center bg-black/40'
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+    >
       <div className='bg-white rounded-lg p-8 shadow-lg relative w-full max-w-lg'>
         <button
           className='absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'

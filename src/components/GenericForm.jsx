@@ -5,8 +5,11 @@ export function GenericForm({
   fields,
   initialValues = {},
   onSubmit,
+  onCancel,
   submitText = 'Guardar'
 }) {
+  console.log('GenericForm props:', { fields, initialValues, submitText })
+
   const {
     register,
     handleSubmit,
@@ -18,11 +21,20 @@ export function GenericForm({
 
   // Reset form when initialValues change (para editar)
   React.useEffect(() => {
+    console.log('Resetting form with:', initialValues)
     reset(initialValues)
   }, [initialValues, reset])
 
+  const handleFormSubmit = (data) => {
+    console.log('GenericForm submit data:', data)
+    onSubmit(data)
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-4'>
+    <form
+      onSubmit={handleSubmit(handleFormSubmit)}
+      className='flex flex-col gap-4'
+    >
       {fields.map((field, idx) =>
         field.section ? (
           <div key={field.section + idx} className='mb-2'>
@@ -42,54 +54,96 @@ export function GenericForm({
             {field.type === 'select' ? (
               <select
                 {...register(field.name, { required: field.required })}
-                className='border p-2 rounded'
-                defaultValue={initialValues[field.name] || ''}
+                className='border border-gray-300 dark:border-gray-600 p-2 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+                defaultValue={
+                  initialValues[field.name] !== undefined &&
+                  initialValues[field.name] !== null
+                    ? initialValues[field.name]
+                    : ''
+                }
               >
                 <option value=''>Selecciona...</option>
-                {field.options.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
+                {field.options.map((opt) => {
+                  const value = typeof opt === 'object' ? opt.value : opt
+                  const label = typeof opt === 'object' ? opt.label : opt
+                  return (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  )
+                })}
               </select>
             ) : field.type === 'textarea' ? (
               <textarea
                 {...register(field.name, { required: field.required })}
-                className='border p-2 rounded resize-none'
+                className='border border-gray-300 dark:border-gray-600 p-2 rounded resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
                 placeholder={field.placeholder || ''}
-                defaultValue={initialValues[field.name] || ''}
+                defaultValue={
+                  initialValues[field.name] !== undefined &&
+                  initialValues[field.name] !== null
+                    ? initialValues[field.name]
+                    : ''
+                }
                 rows={3}
               />
             ) : field.type === 'checkbox' ? (
               <input
                 type='checkbox'
                 {...register(field.name)}
-                className='border p-2 rounded'
-                defaultChecked={!!initialValues[field.name]}
+                className='border border-gray-300 dark:border-gray-600 p-2 rounded bg-white dark:bg-gray-700 text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                defaultChecked={
+                  !!(initialValues[field.name] !== undefined &&
+                  initialValues[field.name] !== null
+                    ? initialValues[field.name]
+                    : false)
+                }
               />
             ) : (
               <input
                 type={field.type}
-                {...register(field.name, { required: field.required })}
-                className='border p-2 rounded'
+                {...register(field.name, {
+                  required: field.required,
+                  valueAsNumber: field.type === 'number'
+                })}
+                className='border border-gray-300 dark:border-gray-600 p-2 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
                 placeholder={field.placeholder || ''}
-                defaultValue={initialValues[field.name] || ''}
+                defaultValue={
+                  initialValues[field.name] !== undefined &&
+                  initialValues[field.name] !== null
+                    ? initialValues[field.name]
+                    : ''
+                }
               />
             )}
             {errors[field.name] && (
-              <span className='text-xs text-red-500'>
-                Este campo es obligatorio
+              <span className='text-xs text-red-500 dark:text-red-400'>
+                {errors[field.name].type === 'required'
+                  ? 'Este campo es obligatorio'
+                  : errors[field.name].message || 'Campo inválido'}
               </span>
             )}
           </div>
         )
       )}
-      <button
-        type='submit'
-        className='w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg mt-4 shadow-sm transition'
-      >
-        {submitText}
-      </button>
+      <div className='flex gap-3 mt-4'>
+        {onCancel && (
+          <button
+            type='button'
+            onClick={onCancel}
+            className='flex-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-2.5 rounded-lg shadow-sm transition-colors'
+          >
+            Cancelar
+          </button>
+        )}
+        <button
+          type='submit'
+          className={`bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg shadow-sm transition-colors ${
+            onCancel ? 'flex-1' : 'w-full'
+          }`}
+        >
+          {submitText}
+        </button>
+      </div>
     </form>
   )
 }

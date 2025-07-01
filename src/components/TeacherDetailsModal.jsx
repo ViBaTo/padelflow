@@ -871,7 +871,14 @@ export function TeacherDetailsModal({
   )
 
   return (
-    <div className='fixed inset-0 z-50 flex justify-center items-center bg-black/50'>
+    <div
+      className='fixed inset-0 z-50 flex justify-center items-center bg-black/50'
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+    >
       <div className='relative bg-white w-full max-w-4xl rounded-xl shadow-lg p-6 overflow-y-auto max-h-[90vh]'>
         <button
           className='absolute top-4 right-6 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'

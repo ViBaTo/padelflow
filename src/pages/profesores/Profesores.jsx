@@ -206,7 +206,7 @@ export function Profesores() {
   if (error) return <p className='text-red-500'>Error: {error}</p>
 
   return (
-    <div className='flex flex-col flex-1 h-full p-6'>
+    <div className='space-y-8 px-2 py-4 sm:px-4 md:px-8 bg-gray-50 min-w-0'>
       {/* Header e indicadores */}
       <div>
         {/* Header */}
@@ -315,7 +315,7 @@ export function Profesores() {
         </div>
       </div>
       {/* Listado con scroll */}
-      <div className='flex-1 overflow-y-auto mt-4'>
+      <div className='w-full min-w-0'>
         {/* Tabla de profesores */}
         <div className='overflow-x-auto'>
           <table className='min-w-full bg-white rounded-xl border border-gray-200'>
