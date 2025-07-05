@@ -5,6 +5,18 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
+// ID de organización constante para La Pala
+const ORGANIZACION_ID = '495f2b65-1b9f-4fdb-bcdf-07374101aa61'
+
+// Función helper para establecer contexto de organización (no necesaria con RLS deshabilitado)
+// const setOrgContext = async () => {
+//   try {
+//     await supabase.rpc('set_current_org', { org_id: ORGANIZACION_ID })
+//   } catch (error) {
+//     console.warn('No se pudo establecer contexto de organización:', error)
+//   }
+// }
+
 // Funciones de autenticación
 export const auth = {
   signIn: async (email, password) => {
@@ -37,12 +49,21 @@ export const auth = {
 export const db = {
   // Alumnos
   getAlumnos: async () => {
-    const { data, error } = await supabase.from('alumnos').select('*')
+    const { data, error } = await supabase
+      .from('alumnos')
+      .select('*')
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
   addAlumno: async (alumno) => {
-    const { data, error } = await supabase.from('alumnos').insert([alumno])
+    const alumnoConOrganizacion = {
+      ...alumno,
+      id_organizacion: ORGANIZACION_ID
+    }
+    const { data, error } = await supabase
+      .from('alumnos')
+      .insert([alumnoConOrganizacion])
     return { data, error }
   },
 
@@ -51,6 +72,7 @@ export const db = {
       .from('alumnos')
       .delete()
       .eq('cedula', cedula)
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
@@ -59,6 +81,7 @@ export const db = {
       .from('alumnos')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('cedula', cedula)
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
@@ -67,17 +90,27 @@ export const db = {
       .from('alumnos')
       .update({ estado: nuevoEstado, updated_at: new Date().toISOString() })
       .eq('cedula', cedula)
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
   // Profesores
   getProfesores: async () => {
-    const { data, error } = await supabase.from('profesores').select('*')
+    const { data, error } = await supabase
+      .from('profesores')
+      .select('*')
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
   addProfesor: async (profesor) => {
-    const { data, error } = await supabase.from('profesores').insert([profesor])
+    const profesorConOrganizacion = {
+      ...profesor,
+      id_organizacion: ORGANIZACION_ID
+    }
+    const { data, error } = await supabase
+      .from('profesores')
+      .insert([profesorConOrganizacion])
     return { data, error }
   },
 
@@ -86,6 +119,7 @@ export const db = {
       .from('profesores')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id_profesor', id_profesor)
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
@@ -94,17 +128,27 @@ export const db = {
       .from('profesores')
       .delete()
       .eq('id_profesor', id_profesor)
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
   // Paquetes
   getPaquetes: async () => {
-    const { data, error } = await supabase.from('paquetes').select('*')
+    const { data, error } = await supabase
+      .from('paquetes')
+      .select('*')
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
   addPaquete: async (paquete) => {
-    const { data, error } = await supabase.from('paquetes').insert([paquete])
+    const paqueteConOrganizacion = {
+      ...paquete,
+      id_organizacion: ORGANIZACION_ID
+    }
+    const { data, error } = await supabase
+      .from('paquetes')
+      .insert([paqueteConOrganizacion])
     return { data, error }
   },
 
@@ -113,6 +157,7 @@ export const db = {
       .from('paquetes')
       .delete()
       .eq('codigo', codigo)
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
@@ -121,6 +166,7 @@ export const db = {
       .from('paquetes')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('codigo', codigo)
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
@@ -144,7 +190,10 @@ export const db = {
 
   // Categorías
   getCategorias: async () => {
-    const { data, error } = await supabase.from('categorias').select('*')
+    const { data, error } = await supabase
+      .from('categorias')
+      .select('*')
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
@@ -162,14 +211,21 @@ export const db = {
 
   // Inscripciones
   addInscripcion: async (inscripcion) => {
+    const inscripcionConOrganizacion = {
+      ...inscripcion,
+      id_organizacion: ORGANIZACION_ID
+    }
     const { data, error } = await supabase
       .from('inscripciones')
-      .insert([inscripcion])
+      .insert([inscripcionConOrganizacion])
     return { data, error }
   },
 
   getInscripciones: async () => {
-    const { data, error } = await supabase.from('inscripciones').select('*')
+    const { data, error } = await supabase
+      .from('inscripciones')
+      .select('*')
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
@@ -177,7 +233,8 @@ export const db = {
     const { data, error } = await supabase
       .from('inscripciones')
       .select('*')
-      .eq('estado', 'activo')
+      .eq('estado', 'ACTIVO')
+      .eq('id_organizacion', ORGANIZACION_ID)
       .order('fecha_fin', { ascending: true })
     return { data, error }
   },
@@ -187,6 +244,7 @@ export const db = {
       .from('inscripciones')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id_inscripcion', id)
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 
@@ -195,6 +253,7 @@ export const db = {
       .from('inscripciones')
       .delete()
       .eq('id_inscripcion', id_inscripcion)
+      .eq('id_organizacion', ORGANIZACION_ID)
     return { data, error }
   },
 

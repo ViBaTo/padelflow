@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Filter,
   Trash2,
@@ -8,13 +9,36 @@ import {
   Search,
   User,
   Package,
-  Calendar
+  Calendar,
+  Plus,
+  X
 } from 'lucide-react'
 import { supabase, db } from '../../lib/supabase'
 import { ComprobanteLink } from '../../components/ComprobanteLink'
 import { uploadFile, deleteFile } from '../../lib/storage'
+// Shadcn/ui components
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 
 export function Pagos() {
+  const navigate = useNavigate()
   const [inscripciones, setInscripciones] = useState([])
   const [alumnos, setAlumnos] = useState([])
   const [paquetes, setPaquetes] = useState([])
@@ -24,6 +48,19 @@ export function Pagos() {
   const [search, setSearch] = useState('')
   const [filterPagado, setFilterPagado] = useState('TODOS')
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
+  const [showNuevoPagoModal, setShowNuevoPagoModal] = useState(false)
+  const [nuevoPagoForm, setNuevoPagoForm] = useState({
+    alumno: '',
+    paquete: '',
+    monto: '',
+    metodoPago: '',
+    fechaPago: new Date().toISOString().split('T')[0],
+    notas: ''
+  })
+  const [searchAlumno, setSearchAlumno] = useState('')
+  const [paquetesDisponibles, setPaquetesDisponibles] = useState([])
+  const [showAlumnoDropdown, setShowAlumnoDropdown] = useState(false)
+  const [comprobanteFile, setComprobanteFile] = useState(null)
 
   // Opciones de modo de pago
   const MODOS_PAGO = [
@@ -31,6 +68,17 @@ export function Pagos() {
     { value: 'tarjeta', label: 'Tarjeta' },
     { value: 'efectivo', label: 'Efectivo' }
   ]
+
+  // Obtener todos los alumnos para el dropdown
+  const alumnosDisponibles = alumnos.map((alumno) => ({
+    cedula: alumno.cedula,
+    nombre: alumno.nombre_completo
+  }))
+
+  // Filtrar alumnos por búsqueda
+  const alumnosFiltrados = alumnosDisponibles.filter((alumno) =>
+    alumno.nombre.toLowerCase().includes(searchAlumno.toLowerCase())
+  )
 
   useEffect(() => {
     async function fetchAll() {
@@ -221,40 +269,179 @@ export function Pagos() {
     }
   }
 
+  // Manejar formulario de nuevo pago
+  const handleNuevoPagoSubmit = async (e) => {
+    e.preventDefault()
+    if (
+      !nuevoPagoForm.alumno ||
+      !nuevoPagoForm.paquete ||
+      !nuevoPagoForm.metodoPago
+    ) {
+      alert('Por favor completa todos los campos obligatorios')
+      return
+    }
+
+    // Validar comprobante para transferencias
+    if (nuevoPagoForm.metodoPago === 'transferencia' && !comprobanteFile) {
+      alert('El comprobante es requerido para pagos por transferencia')
+      return
+    }
+
+    setSavingId('nuevo-pago')
+    try {
+      let comprobanteUrl = null
+
+      // Si hay comprobante y es transferencia, subirlo primero
+      if (comprobanteFile && nuevoPagoForm.metodoPago === 'transferencia') {
+        const ext = comprobanteFile.name.split('.').pop()
+        const filePath = `comprobante_${Date.now()}.${ext}`
+
+        const { error: uploadError } = await uploadFile(
+          'comprobantes',
+          filePath,
+          comprobanteFile
+        )
+
+        if (uploadError) {
+          throw new Error('Error al subir comprobante: ' + uploadError.message)
+        }
+
+        comprobanteUrl = filePath
+      }
+
+      // Crear nueva inscripción
+      const { data: inscripcionData, error: inscripcionError } = await supabase
+        .from('inscripciones')
+        .insert([
+          {
+            cedula_alumno: nuevoPagoForm.alumno,
+            codigo_paquete: nuevoPagoForm.paquete,
+            pagado: true,
+            modo_pago: nuevoPagoForm.metodoPago,
+            fecha_pago: nuevoPagoForm.fechaPago,
+            notas_pago: nuevoPagoForm.notas,
+            comprobante: comprobanteUrl,
+            estado: 'ACTIVO',
+            fecha_inicio: nuevoPagoForm.fechaPago,
+            id_organizacion: '495f2b65-1b9f-4fdb-bcdf-07374101aa61',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ])
+        .select()
+
+      if (inscripcionError) throw inscripcionError
+
+      // Actualizar el estado local
+      if (inscripcionData && inscripcionData.length > 0) {
+        setInscripciones((prev) => [...prev, inscripcionData[0]])
+      }
+
+      // Resetear formulario y cerrar modal
+      setNuevoPagoForm({
+        alumno: '',
+        paquete: '',
+        monto: '',
+        metodoPago: '',
+        fechaPago: new Date().toISOString().split('T')[0],
+        notas: ''
+      })
+      setSearchAlumno('')
+      setShowAlumnoDropdown(false)
+      setComprobanteFile(null)
+      setShowNuevoPagoModal(false)
+    } catch (error) {
+      alert('Error al registrar el pago: ' + error.message)
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const handleAlumnoSelect = (alumno) => {
+    setNuevoPagoForm((prev) => ({
+      ...prev,
+      alumno: alumno.cedula
+    }))
+    setSearchAlumno(alumno.nombre)
+    setShowAlumnoDropdown(false) // Cerrar el dropdown
+  }
+
+  const handlePaqueteSelect = (paqueteCodigo) => {
+    const paquete = paquetes.find((p) => p.codigo === paqueteCodigo)
+    if (paquete) {
+      const monto = paquete.precio_con_iva * paquete.numero_clases
+      setNuevoPagoForm((prev) => ({
+        ...prev,
+        paquete: paqueteCodigo,
+        monto: monto.toString()
+      }))
+    }
+  }
+
+  const handleInscribirNuevoAlumno = () => {
+    // Cerrar el modal actual
+    setShowNuevoPagoModal(false)
+    // Resetear formulario
+    setNuevoPagoForm({
+      alumno: '',
+      paquete: '',
+      monto: '',
+      metodoPago: '',
+      fechaPago: new Date().toISOString().split('T')[0],
+      notas: ''
+    })
+    setSearchAlumno('')
+    setShowAlumnoDropdown(false)
+    setComprobanteFile(null)
+    // Navegar a la página de Alumnos donde pueden agregar nuevos alumnos
+    navigate('/alumnos')
+  }
+
+  // Cerrar dropdown cuando se hace click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showAlumnoDropdown) {
+        // Si el click no es dentro del dropdown, cerrarlo
+        const dropdown = event.target.closest('.alumno-dropdown-container')
+        if (!dropdown) {
+          setShowAlumnoDropdown(false)
+        }
+      }
+    }
+
+    if (showAlumnoDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showAlumnoDropdown])
+
   // Badges
   const getPagadoBadge = (pagado) => (
-    <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-        pagado
-          ? 'bg-green-100 text-green-800 border border-green-200'
-          : 'bg-red-100 text-red-800 border border-red-200'
-      }`}
-    >
+    <Badge variant={pagado ? 'default' : 'destructive'} className='gap-2'>
       <div
-        className={`w-2 h-2 rounded-full mr-2 ${
+        className={`w-2 h-2 rounded-full ${
           pagado ? 'bg-green-500' : 'bg-red-500'
         }`}
       ></div>
       {pagado ? 'Pagado' : 'Pendiente'}
-    </span>
+    </Badge>
   )
 
   const getModoPagoBadge = (modoPago) => {
-    const colors = {
-      transferencia: 'bg-blue-100 text-blue-800 border-blue-200',
-      tarjeta: 'bg-purple-100 text-purple-800 border-purple-200',
-      efectivo: 'bg-green-100 text-green-800 border-green-200'
+    const variants = {
+      transferencia: 'secondary',
+      tarjeta: 'outline',
+      efectivo: 'default'
     }
     return (
-      <span
-        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
-          colors[modoPago] || 'bg-gray-100 text-gray-800 border-gray-200'
-        }`}
-      >
+      <Badge variant={variants[modoPago] || 'outline'}>
         {modoPago
           ? modoPago.charAt(0).toUpperCase() + modoPago.slice(1)
           : 'No definido'}
-      </span>
+      </Badge>
     )
   }
 
@@ -270,6 +457,10 @@ export function Pagos() {
             Gestiona los pagos e inscripciones del club
           </p>
         </div>
+        <Button onClick={() => setShowNuevoPagoModal(true)} className='h-10'>
+          <DollarSign className='w-4 h-4' />
+          Nuevo Pago
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -541,6 +732,262 @@ export function Pagos() {
           )}
         </div>
       </div>
+
+      {/* Modal Nuevo Pago */}
+      <Dialog
+        open={showNuevoPagoModal}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowNuevoPagoModal(false)
+            setSearchAlumno('')
+            setShowAlumnoDropdown(false)
+            setComprobanteFile(null)
+          }
+        }}
+      >
+        <DialogContent className='max-w-md'>
+          <DialogHeader>
+            <DialogTitle>Registrar Nuevo Pago</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleNuevoPagoSubmit} className='space-y-4'>
+            {/* Seleccionar Alumno */}
+            <div className='space-y-2'>
+              <Label htmlFor='alumno'>Seleccionar Alumno *</Label>
+              <div className='relative alumno-dropdown-container'>
+                <Input
+                  id='alumno'
+                  type='text'
+                  placeholder='Buscar alumno...'
+                  value={searchAlumno}
+                  onChange={(e) => {
+                    setSearchAlumno(e.target.value)
+                    setShowAlumnoDropdown(e.target.value.length > 0)
+                  }}
+                  onFocus={() => setShowAlumnoDropdown(searchAlumno.length > 0)}
+                />
+                {showAlumnoDropdown && searchAlumno && (
+                  <div className='absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto z-10 shadow-lg'>
+                    {alumnosFiltrados.length > 0 ? (
+                      alumnosFiltrados.map((alumno) => (
+                        <button
+                          key={alumno.cedula}
+                          type='button'
+                          onClick={() => handleAlumnoSelect(alumno)}
+                          className='w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0'
+                        >
+                          <div className='font-medium text-gray-900'>
+                            {alumno.nombre}
+                          </div>
+                          <div className='text-sm text-gray-600'>
+                            {alumno.cedula}
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className='px-3 py-2 text-gray-500'>
+                        No se encontraron alumnos
+                      </div>
+                    )}
+                    <button
+                      type='button'
+                      onClick={handleInscribirNuevoAlumno}
+                      className='w-full text-left px-3 py-2 text-blue-600 hover:bg-blue-50 border-t border-gray-200 transition-colors'
+                    >
+                      + Inscribir nuevo alumno
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Seleccionar Paquete */}
+            <div className='space-y-2'>
+              <Label htmlFor='paquete'>Seleccionar Paquete *</Label>
+              <Select
+                value={nuevoPagoForm.paquete}
+                onValueChange={(value) => handlePaqueteSelect(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='Seleccionar paquete...' />
+                </SelectTrigger>
+                <SelectContent>
+                  {paquetes.map((paquete) => (
+                    <SelectItem key={paquete.codigo} value={paquete.codigo}>
+                      {paquete.nombre} - $
+                      {(
+                        paquete.precio_con_iva * paquete.numero_clases
+                      ).toLocaleString()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Monto (solo lectura) */}
+            <div className='space-y-2'>
+              <Label htmlFor='monto'>Monto Total</Label>
+              <div className='relative'>
+                <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500'>
+                  $
+                </span>
+                <Input
+                  id='monto'
+                  type='text'
+                  value={
+                    nuevoPagoForm.monto
+                      ? Number(nuevoPagoForm.monto).toLocaleString()
+                      : '0.00'
+                  }
+                  className='pl-8 bg-gray-100 text-gray-700'
+                  readOnly
+                />
+              </div>
+              <p className='text-xs text-gray-500'>
+                El monto se calcula automáticamente según el paquete
+                seleccionado
+              </p>
+            </div>
+
+            {/* Método de Pago */}
+            <div className='space-y-2'>
+              <Label htmlFor='metodoPago'>Método de Pago *</Label>
+              <Select
+                value={nuevoPagoForm.metodoPago}
+                onValueChange={(value) =>
+                  setNuevoPagoForm((prev) => ({
+                    ...prev,
+                    metodoPago: value
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='Seleccionar método...' />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODOS_PAGO.map((modo) => (
+                    <SelectItem key={modo.value} value={modo.value}>
+                      {modo.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Fecha de Pago */}
+            <div className='space-y-2'>
+              <Label htmlFor='fechaPago'>Fecha de Pago *</Label>
+              <Input
+                id='fechaPago'
+                type='date'
+                value={nuevoPagoForm.fechaPago}
+                onChange={(e) =>
+                  setNuevoPagoForm((prev) => ({
+                    ...prev,
+                    fechaPago: e.target.value
+                  }))
+                }
+                required
+              />
+            </div>
+
+            {/* Notas */}
+            <div className='space-y-2'>
+              <Label htmlFor='notas'>Notas</Label>
+              <Textarea
+                id='notas'
+                placeholder='Comentarios adicionales...'
+                value={nuevoPagoForm.notas}
+                onChange={(e) =>
+                  setNuevoPagoForm((prev) => ({
+                    ...prev,
+                    notas: e.target.value
+                  }))
+                }
+                rows={3}
+              />
+            </div>
+
+            {/* Comprobante (solo para transferencias) */}
+            {nuevoPagoForm.metodoPago === 'transferencia' && (
+              <div className='space-y-2'>
+                <Label htmlFor='comprobante'>
+                  Comprobante de Transferencia *
+                </Label>
+                <div className='border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors'>
+                  <input
+                    type='file'
+                    accept='.png,.jpg,.jpeg,.pdf'
+                    onChange={(e) => setComprobanteFile(e.target.files[0])}
+                    className='hidden'
+                    id='comprobante-upload'
+                  />
+                  <label
+                    htmlFor='comprobante-upload'
+                    className='cursor-pointer flex flex-col items-center gap-2'
+                  >
+                    <FileText className='w-8 h-8 text-gray-400' />
+                    {comprobanteFile ? (
+                      <div className='text-sm'>
+                        <p className='font-medium text-green-600'>
+                          ✓ {comprobanteFile.name}
+                        </p>
+                        <p className='text-gray-500'>
+                          Click para cambiar archivo
+                        </p>
+                      </div>
+                    ) : (
+                      <div className='text-sm'>
+                        <p className='font-medium text-gray-700'>
+                          Click para subir comprobante
+                        </p>
+                        <p className='text-gray-500'>
+                          PNG, JPG o PDF (máx. 10MB)
+                        </p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+                <p className='text-xs text-gray-500'>
+                  Requerido para pagos por transferencia
+                </p>
+              </div>
+            )}
+          </form>
+
+          <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => {
+                setShowNuevoPagoModal(false)
+                setSearchAlumno('')
+                setShowAlumnoDropdown(false)
+                setComprobanteFile(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type='submit'
+              disabled={savingId === 'nuevo-pago'}
+              onClick={handleNuevoPagoSubmit}
+            >
+              {savingId === 'nuevo-pago' ? (
+                <>
+                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <DollarSign className='w-4 h-4' />
+                  Registrar Pago
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -19,6 +19,7 @@ export function Register() {
   } = useForm()
 
   const password = watch('password')
+  const email = watch('email')
 
   const onSubmit = async (data) => {
     setIsLoading(true)
@@ -115,6 +116,35 @@ export function Register() {
                 {errors.email && (
                   <p className='mt-1 text-sm text-red-500'>
                     {errors.email.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor='confirmEmail'
+                  className='block mb-2 text-sm font-medium text-gray-900 dark:text-white'
+                >
+                  Confirmar email
+                </label>
+                <input
+                  type='email'
+                  id='confirmEmail'
+                  className='bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+                  placeholder='name@company.com'
+                  required
+                  {...register('confirmEmail', {
+                    required: 'Debe confirmar el email',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Email inválido'
+                    },
+                    validate: (value) =>
+                      value === email || 'Los emails no coinciden'
+                  })}
+                />
+                {errors.confirmEmail && (
+                  <p className='mt-1 text-sm text-red-500'>
+                    {errors.confirmEmail.message}
                   </p>
                 )}
               </div>

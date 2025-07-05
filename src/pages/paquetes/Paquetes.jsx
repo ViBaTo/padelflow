@@ -37,8 +37,11 @@ export function Paquetes() {
   const fetchPaquetes = async () => {
     setLoading(true)
     const { data, error } = await db.getPaquetes()
-    if (error) setError(error.message)
-    else setPaquetes(data)
+    if (error) {
+      setError(error.message)
+    } else {
+      setPaquetes(data || [])
+    }
     setLoading(false)
   }
 
@@ -111,6 +114,7 @@ export function Paquetes() {
 
   // Filtros y paginación
   const paquetesFiltrados = paquetes.filter((paquete) => {
+    if (!paquete) return false
     const matchNombre =
       paquete.nombre &&
       paquete.nombre.toLowerCase().includes(search.toLowerCase())
@@ -119,9 +123,12 @@ export function Paquetes() {
       paquete.codigo.toLowerCase().includes(search.toLowerCase())
     const matchTipoServicio =
       filterTipoServicio === 'TODOS' ||
-      paquete.tipo_servicio === filterTipoServicio
+      (paquete.tipo_servicio && paquete.tipo_servicio === filterTipoServicio)
     return (matchNombre || matchCodigo) && matchTipoServicio
   })
+
+  // console.log('Total paquetes:', paquetes.length)
+  // console.log('Paquetes filtrados:', paquetesFiltrados.length)
 
   const totalPages = Math.ceil(paquetesFiltrados.length / recordsPerPage)
   const paginatedPaquetes = paquetesFiltrados.slice(
@@ -135,11 +142,17 @@ export function Paquetes() {
 
   // Estadísticas
   const totalPaquetes = paquetes.length
-  const totalIngresos = paquetes.reduce((sum, p) => sum + p.precio_con_iva, 0)
-  const tiposServicioUnicos = [...new Set(paquetes.map((p) => p.tipo_servicio))]
+  const totalIngresos = paquetes.reduce(
+    (sum, p) => sum + (p.precio_con_iva || 0),
+    0
+  )
+  const tiposServicioUnicos = [
+    ...new Set(paquetes.map((p) => p.tipo_servicio).filter(Boolean))
+  ]
 
   // Badges
   const getTipoServicioBadge = (tipo) => {
+    if (!tipo) return <span className='text-gray-400'>N/A</span>
     const colors = {
       CONDFIS: 'bg-blue-100 text-blue-800',
       ACADEMIA: 'bg-green-100 text-green-800',
@@ -261,11 +274,17 @@ export function Paquetes() {
                       className='w-full border border-gray-200 p-2 rounded-lg text-sm'
                     >
                       <option value='TODOS'>Todos</option>
-                      {tiposServicioUnicos.map((tipo) => (
-                        <option key={tipo} value={tipo}>
-                          {tipo}
+                      {tiposServicioUnicos.length > 0 ? (
+                        tiposServicioUnicos.map((tipo) => (
+                          <option key={tipo} value={tipo}>
+                            {tipo}
+                          </option>
+                        ))
+                      ) : (
+                        <option value='' disabled>
+                          No hay tipos de servicio
                         </option>
-                      ))}
+                      )}
                     </select>
                   </div>
                 )}
@@ -302,47 +321,60 @@ export function Paquetes() {
               </tr>
             </thead>
             <tbody className='divide-y divide-gray-100'>
-              {paginatedPaquetes.map((paquete) => (
-                <tr
-                  key={paquete.codigo}
-                  className='hover:bg-gray-50 transition'
-                  onContextMenu={(e) => handleContextMenu(e, paquete.codigo)}
-                >
-                  <td className='px-6 py-4 text-sm text-gray-900'>
-                    {paquete.codigo}
-                  </td>
-                  <td className='px-6 py-4 text-sm text-gray-900 font-medium'>
-                    {paquete.nombre}
-                  </td>
-                  <td className='px-6 py-4 text-sm text-gray-700'>
-                    {getTipoServicioBadge(paquete.tipo_servicio)}
-                  </td>
-                  <td className='px-6 py-4 text-sm text-gray-600'>
-                    {paquete.numero_clases}
-                  </td>
-                  <td className='px-6 py-4 text-sm text-gray-900'>
-                    <span className='font-bold text-green-600'>
-                      $
-                      {formatCurrency(
-                        paquete.precio_con_iva * paquete.numero_clases
-                      )}
-                    </span>
-                  </td>
-                  <td className='px-6 py-4'>
-                    <div className='flex space-x-2'>
-                      <button
-                        className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'
-                        onClick={() => {
-                          setSelectedPaquete(paquete)
-                          setShowDetailModal(true)
-                        }}
-                      >
-                        Ver
-                      </button>
-                    </div>
+              {paginatedPaquetes.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan='6'
+                    className='px-6 py-8 text-center text-gray-500'
+                  >
+                    {paquetes.length === 0
+                      ? 'No hay paquetes registrados'
+                      : 'No se encontraron paquetes con los filtros aplicados'}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginatedPaquetes.map((paquete) => (
+                  <tr
+                    key={paquete.codigo}
+                    className='hover:bg-gray-50 transition'
+                    onContextMenu={(e) => handleContextMenu(e, paquete.codigo)}
+                  >
+                    <td className='px-6 py-4 text-sm text-gray-900'>
+                      {paquete.codigo || 'N/A'}
+                    </td>
+                    <td className='px-6 py-4 text-sm text-gray-900 font-medium'>
+                      {paquete.nombre || 'Sin nombre'}
+                    </td>
+                    <td className='px-6 py-4 text-sm text-gray-700'>
+                      {getTipoServicioBadge(paquete.tipo_servicio)}
+                    </td>
+                    <td className='px-6 py-4 text-sm text-gray-600'>
+                      {paquete.numero_clases || 0}
+                    </td>
+                    <td className='px-6 py-4 text-sm text-gray-900'>
+                      <span className='font-bold text-green-600'>
+                        {formatCurrency(
+                          (paquete.precio_con_iva || 0) *
+                            (paquete.numero_clases || 0)
+                        )}
+                      </span>
+                    </td>
+                    <td className='px-6 py-4'>
+                      <div className='flex space-x-2'>
+                        <button
+                          className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'
+                          onClick={() => {
+                            setSelectedPaquete(paquete)
+                            setShowDetailModal(true)
+                          }}
+                        >
+                          Ver
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

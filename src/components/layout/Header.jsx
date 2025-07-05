@@ -82,7 +82,8 @@ function UserMenu() {
 
 export function Header() {
   const { isDarkMode, toggleDarkMode } = useStore()
-  const { openSidebar } = useSidebar()
+  const sidebar = useSidebar()
+  const openSidebar = sidebar?.openSidebar || (() => {})
   const [showInscripcionModal, setShowInscripcionModal] = useState(false)
   const [alumnos, setAlumnos] = useState([])
   const [paquetes, setPaquetes] = useState([])

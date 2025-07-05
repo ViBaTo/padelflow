@@ -8,8 +8,6 @@ export function GenericForm({
   onCancel,
   submitText = 'Guardar'
 }) {
-  console.log('GenericForm props:', { fields, initialValues, submitText })
-
   const {
     register,
     handleSubmit,
@@ -21,12 +19,10 @@ export function GenericForm({
 
   // Reset form when initialValues change (para editar)
   React.useEffect(() => {
-    console.log('Resetting form with:', initialValues)
     reset(initialValues)
   }, [initialValues, reset])
 
   const handleFormSubmit = (data) => {
-    console.log('GenericForm submit data:', data)
     onSubmit(data)
   }
 

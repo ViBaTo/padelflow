@@ -10,11 +10,13 @@ export function NuevaInscripcionForm({
   const [alumnos, setAlumnos] = useState([])
   const [paquetes, setPaquetes] = useState([])
   const [profesores, setProfesores] = useState([])
+  const [horariosGrupos, setHorariosGrupos] = useState([])
   const [form, setForm] = useState({
     alumno: '',
     paquete: '',
     fecha: '',
-    profesor: ''
+    profesor: '',
+    horario: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -23,11 +25,33 @@ export function NuevaInscripcionForm({
   const [showAlumnoDropdown, setShowAlumnoDropdown] = useState(false)
   const alumnoInputRef = useRef(null)
 
+  const fetchHorarios = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('horarios_grupos')
+        .select('*')
+        .eq('activo', true)
+        .order('nombre_horario')
+
+      if (error) throw error
+      setHorariosGrupos(data || [])
+    } catch (err) {
+      console.error('Error cargando horarios:', err)
+    }
+  }
+
+  const isAcademiaPackage = () => {
+    if (!form.paquete) return false
+    const paqueteSeleccionado = paquetes.find((p) => p.codigo === form.paquete)
+    return paqueteSeleccionado?.tipo_servicio === 'ACADEMIA'
+  }
+
   useEffect(() => {
     if (open) {
       db.getAlumnos().then(({ data }) => setAlumnos(data || []))
       db.getPaquetes().then(({ data }) => setPaquetes(data || []))
       db.getProfesores().then(({ data }) => setProfesores(data || []))
+      fetchHorarios()
 
       if (alumnoPreSeleccionado) {
         setForm((prev) => ({
@@ -36,7 +60,13 @@ export function NuevaInscripcionForm({
         }))
         setAlumnoSearch(alumnoPreSeleccionado.nombre_completo)
       } else {
-        setForm({ alumno: '', paquete: '', fecha: '', profesor: '' })
+        setForm({
+          alumno: '',
+          paquete: '',
+          fecha: '',
+          profesor: '',
+          horario: ''
+        })
         setAlumnoSearch('')
       }
 
@@ -44,6 +74,12 @@ export function NuevaInscripcionForm({
       setSuccess('')
     }
   }, [open, alumnoPreSeleccionado])
+
+  useEffect(() => {
+    if (!isAcademiaPackage() && form.horario) {
+      setForm((prev) => ({ ...prev, horario: '' }))
+    }
+  }, [form.paquete, paquetes])
 
   const alumnosFiltrados = alumnoSearch
     ? alumnos.filter(
@@ -70,6 +106,13 @@ export function NuevaInscripcionForm({
         setLoading(false)
         return
       }
+
+      if (paquete.tipo_servicio === 'ACADEMIA' && !form.horario) {
+        setError('Por favor selecciona un horario para el paquete de Academia.')
+        setLoading(false)
+        return
+      }
+
       if (alumno.estado === 'INACTIVO') {
         await db.updateAlumnoEstado(alumno.cedula, 'ACTIVO')
       }
@@ -80,6 +123,7 @@ export function NuevaInscripcionForm({
         setLoading(false)
         return
       }
+
       const inscripcion = {
         cedula_alumno: alumno.cedula,
         codigo_paquete: paquete.codigo,
@@ -92,6 +136,8 @@ export function NuevaInscripcionForm({
         modo_pago: null,
         comprobante: null,
         observaciones: null,
+        id_horario:
+          paquete.tipo_servicio === 'ACADEMIA' ? parseInt(form.horario) : null,
         estado: 'ACTIVO',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -227,6 +273,27 @@ export function NuevaInscripcionForm({
               ))}
             </select>
           </div>
+          {isAcademiaPackage() && (
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Horario/Grupo *
+              </label>
+              <select
+                name='horario'
+                value={form.horario}
+                onChange={handleChange}
+                required
+                className='border p-2 rounded w-full'
+              >
+                <option value=''>Selecciona un horario...</option>
+                {horariosGrupos.map((horario) => (
+                  <option key={horario.id_horario} value={horario.id_horario}>
+                    {horario.nombre_horario}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
               Fecha de inicio

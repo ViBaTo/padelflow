@@ -31,26 +31,27 @@ export function UserProfileModal({ open, onClose }) {
 
   useEffect(() => {
     if (user?.id) {
-      supabase
-        .from('usuarios')
-        .select('telefono')
-        .eq('auth_user_id', user.id)
-        .single()
-        .then(({ data }) => {
-          if (data?.telefono) {
-            // Separar código y número si es posible
-            const match = data.telefono.match(/^(\+\d{1,4})\s?(.*)$/)
-            if (match) {
-              setForm((f) => ({
-                ...f,
-                countryCode: match[1],
-                telefono: match[2]
-              }))
-            } else {
-              setForm((f) => ({ ...f, telefono: data.telefono }))
-            }
-          }
-        })
+      // TODO: Implementar tabla usuarios cuando esté disponible
+      // supabase
+      //   .from('usuarios')
+      //   .select('telefono')
+      //   .eq('auth_user_id', user.id)
+      //   .single()
+      //   .then(({ data }) => {
+      //     if (data?.telefono) {
+      //       // Separar código y número si es posible
+      //       const match = data.telefono.match(/^(\+\d{1,4})\s?(.*)$/)
+      //       if (match) {
+      //         setForm((f) => ({
+      //           ...f,
+      //           countryCode: match[1],
+      //           telefono: match[2]
+      //         }))
+      //       } else {
+      //         setForm((f) => ({ ...f, telefono: data.telefono }))
+      //       }
+      //     }
+      //   })
     }
   }, [user])
 
@@ -73,15 +74,15 @@ export function UserProfileModal({ open, onClose }) {
         })
         if (emailError) throw emailError
       }
-      // Actualizar teléfono
-      const telefonoCompleto = `${form.countryCode} ${form.telefono}`.trim()
-      if (form.telefono) {
-        const { error: telError } = await supabase
-          .from('usuarios')
-          .update({ telefono: telefonoCompleto })
-          .eq('auth_user_id', user.id)
-        if (telError) throw telError
-      }
+      // TODO: Actualizar teléfono cuando tabla usuarios esté disponible
+      // const telefonoCompleto = `${form.countryCode} ${form.telefono}`.trim()
+      // if (form.telefono) {
+      //   const { error: telError } = await supabase
+      //     .from('usuarios')
+      //     .update({ telefono: telefonoCompleto })
+      //     .eq('auth_user_id', user.id)
+      //   if (telError) throw telError
+      // }
       setSuccess('Datos actualizados correctamente')
     } catch (err) {
       setError(err.message || 'Error al actualizar datos')
