@@ -262,5 +262,81 @@ export const db = {
       .from('vista_inscripciones_activas')
       .select('*')
     return { data, error }
+  },
+
+  // Asistencias/Eventos de Calendario
+  getAsistencias: async () => {
+    const { data, error } = await supabase
+      .from('asistencias')
+      .select(
+        `
+        *,
+        profesores:id_profesor (nombre_completo),
+        alumnos:cedula_alumno (nombre_completo)
+      `
+      )
+      .eq('id_organizacion', ORGANIZACION_ID)
+      .order('fecha_clase', { ascending: true })
+    return { data, error }
+  },
+
+  addAsistencia: async (asistencia) => {
+    const asistenciaConOrganizacion = {
+      ...asistencia,
+      id_organizacion: ORGANIZACION_ID
+    }
+    const { data, error } = await supabase
+      .from('asistencias')
+      .insert([asistenciaConOrganizacion])
+      .select()
+    return { data, error }
+  },
+
+  updateAsistencia: async (id_asistencia, updates) => {
+    const { data, error } = await supabase
+      .from('asistencias')
+      .update(updates)
+      .eq('id_asistencia', id_asistencia)
+      .eq('id_organizacion', ORGANIZACION_ID)
+      .select()
+    return { data, error }
+  },
+
+  deleteAsistencia: async (id_asistencia) => {
+    const { data, error } = await supabase
+      .from('asistencias')
+      .delete()
+      .eq('id_asistencia', id_asistencia)
+      .eq('id_organizacion', ORGANIZACION_ID)
+    return { data, error }
+  },
+
+  // Obtener asistencias por fecha
+  getAsistenciasPorFecha: async (fechaInicio, fechaFin) => {
+    const { data, error } = await supabase
+      .from('asistencias')
+      .select(
+        `
+        *,
+        profesores:id_profesor (nombre_completo),
+        alumnos:cedula_alumno (nombre_completo)
+      `
+      )
+      .eq('id_organizacion', ORGANIZACION_ID)
+      .gte('fecha_clase', fechaInicio)
+      .lte('fecha_clase', fechaFin)
+      .order('fecha_clase', { ascending: true })
+    return { data, error }
+  },
+
+  // Mover asistencia a otra fecha (usado para drag and drop)
+  moverAsistencia: async (id_asistencia, nuevaFecha) => {
+    const { data, error } = await supabase
+      .from('asistencias')
+      .update({ fecha_clase: nuevaFecha })
+      .eq('id_asistencia', id_asistencia)
+      .eq('id_organizacion', ORGANIZACION_ID)
+      .select()
+    return { data, error }
   }
 }

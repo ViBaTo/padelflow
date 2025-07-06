@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 @import 'flowbite/src/themes/default';
 @import 'flowbite';
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -184,4 +184,63 @@ td {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Drag and drop styles */
+.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  transition: all 0.2s ease;
+}
+
+.drag-over {
+  background-color: #dbeafe !important;
+  border-color: #3b82f6 !important;
+  transform: scale(1.02);
+  transition: all 0.2s ease;
+}
+
+.drag-preview {
+  pointer-events: none;
+  opacity: 0.8;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Mejoras visuales para eventos draggables */
+.calendar-event {
+  transition: all 0.15s ease;
+}
+
+.calendar-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-event.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+/* Indicador visual de zona de drop */
+.drop-zone {
+  position: relative;
+}
+
+.drop-zone::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  border: 2px dashed #3b82f6;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.drop-zone.drag-over::after {
+  opacity: 1;
 }
