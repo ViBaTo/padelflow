@@ -1,5 +1,13 @@
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
-import { Package, DollarSign, Calendar, Edit2, X } from 'lucide-react'
+import {
+  Package,
+  DollarSign,
+  Calendar,
+  Edit2,
+  X,
+  AlertTriangle,
+  Trash2
+} from 'lucide-react'
 import { useState } from 'react'
 import { GenericForm } from './GenericForm'
 import { db } from '../lib/supabase'
@@ -11,6 +19,8 @@ export function PaqueteDetailsModal({ open, onClose, paquete, onDataChange }) {
   const [isEditing, setIsEditing] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Utilidades para badges
   const getTipoServicioBadge = (tipo) => {
@@ -67,6 +77,28 @@ export function PaqueteDetailsModal({ open, onClose, paquete, onDataChange }) {
       if (onDataChange) onDataChange()
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  // Handler para eliminar paquete
+  const handleDeletePaquete = async () => {
+    setIsDeleting(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const { error } = await db.deletePaquete(paquete.codigo)
+      if (error) throw error
+      setSuccess('Paquete eliminado correctamente')
+      setShowDeleteConfirm(false)
+      if (onDataChange) onDataChange()
+      // Cerrar modal después de eliminar
+      setTimeout(() => {
+        onClose()
+      }, 1500)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -249,9 +281,81 @@ export function PaqueteDetailsModal({ open, onClose, paquete, onDataChange }) {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Botón de eliminar paquete */}
+            <div className='flex justify-end pt-4'>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className='flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors'
+              >
+                <Trash2 className='w-4 h-4' />
+                Eliminar Paquete
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación para eliminar */}
+      {showDeleteConfirm && (
+        <div className='fixed inset-0 z-60 flex justify-center items-center bg-black/50'>
+          <div className='bg-white rounded-lg p-6 max-w-md w-full mx-4'>
+            <div className='flex items-center gap-3 mb-4'>
+              <div className='flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center'>
+                <AlertTriangle className='w-6 h-6 text-red-600' />
+              </div>
+              <div>
+                <h3 className='text-lg font-semibold text-gray-900'>
+                  Confirmar eliminación
+                </h3>
+                <p className='text-sm text-gray-600'>
+                  Esta acción no se puede deshacer
+                </p>
+              </div>
+            </div>
+
+            <div className='mb-6'>
+              <p className='text-gray-700'>
+                ¿Estás seguro que deseas eliminar el paquete{' '}
+                <strong>{paquete.nombre}</strong>?
+              </p>
+              <div className='mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg'>
+                <p className='text-sm text-yellow-800'>
+                  <strong>Advertencia:</strong> Al eliminar este paquete se
+                  perderá toda su información y no podrá recuperarse.
+                </p>
+              </div>
+            </div>
+
+            <div className='flex gap-3 justify-end'>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className='px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50'
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeletePaquete}
+                disabled={isDeleting}
+                className='px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2'
+              >
+                {isDeleting ? (
+                  <>
+                    <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className='w-4 h-4' />
+                    Eliminar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
