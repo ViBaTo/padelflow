@@ -33,7 +33,7 @@ ChartJS.register(
   Filler
 )
 import { Button } from '../components/ui/button'
-import { Alert } from '../components/ui/alert'
+import { Alert } from '../components/ui/Alert'
 import { Heading, Text, Muted } from '../components/ui/Typography'
 import { componentClasses, designTokens } from '../lib/designTokens'
 import {

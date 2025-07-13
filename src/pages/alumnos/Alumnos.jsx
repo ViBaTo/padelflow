@@ -7,8 +7,8 @@ import {
   CardHeader,
   CardTitle,
   CardSubtitle
-} from '../../components/ui/Card'
-import { Button } from '../../components/ui/Button'
+} from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
 import { Alert } from '../../components/ui/Alert'
 import { Heading, Text, Muted } from '../../components/ui/Typography'
 import { componentClasses, designTokens } from '../../lib/designTokens'
@@ -177,8 +177,20 @@ export default function Alumnos() {
   const handleDelete = async (cedula) => {
     setContextMenu({ ...contextMenu, visible: false })
     const { error } = await db.deleteAlumno(cedula)
-    if (error) setError(error.message)
-    else fetchAlumnos()
+    if (error) {
+      // Detecta el error de clave foránea de asistencias
+      if (
+        error.message &&
+        error.message.includes('violates foreign key constraint') &&
+        error.message.includes('asistencias_alumno_fkey')
+      ) {
+        setError(
+          'No puedes eliminar este alumno porque tiene asistencias registradas. Elimina primero sus asistencias antes de eliminar al alumno.'
+        )
+      } else {
+        setError(error.message)
+      }
+    } else fetchAlumnos()
   }
 
   const handleContextMenu = (e, cedula) => {

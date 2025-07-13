@@ -9,7 +9,7 @@ import {
 import { Heading, Text, Muted, Lead } from './ui/Typography'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Alert } from './ui/alert'
+import { Alert } from './ui/Alert'
 
 export function TypographyDemo() {
   return (
