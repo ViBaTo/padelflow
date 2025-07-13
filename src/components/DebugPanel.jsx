@@ -2,7 +2,7 @@ import { useStore } from '../lib/store'
 import { clearAppState, detectAndCleanCorruptedState } from '../lib/store'
 import { diagnoseUserSync } from '../lib/diagnostics'
 import { useState, useEffect } from 'react'
-import { Button } from './ui/Button'
+import { Button } from './ui/button'
 
 export function DebugPanel() {
   const store = useStore()
