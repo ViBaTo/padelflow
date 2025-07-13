@@ -8,9 +8,9 @@ import {
   CardHeader,
   CardTitle,
   CardSubtitle
-} from '../../components/ui/Card'
-import { Button } from '../../components/ui/Button'
-import { Alert } from '../../components/ui/Alert'
+} from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Alert } from '../../components/ui/alert'
 import { Heading, Text, Muted } from '../../components/ui/Typography'
 import { componentClasses, designTokens } from '../../lib/designTokens'
 import {

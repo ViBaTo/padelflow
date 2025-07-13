@@ -19,7 +19,7 @@ import {
   CardHeader,
   CardTitle,
   CardSubtitle
-} from '../components/ui/Card'
+} from '../components/ui/card'
 
 // Registrar componentes de Chart.js
 ChartJS.register(
@@ -32,8 +32,8 @@ ChartJS.register(
   Legend,
   Filler
 )
-import { Button } from '../components/ui/Button'
-import { Alert } from '../components/ui/Alert'
+import { Button } from '../components/ui/button'
+import { Alert } from '../components/ui/alert'
 import { Heading, Text, Muted } from '../components/ui/Typography'
 import { componentClasses, designTokens } from '../lib/designTokens'
 import {

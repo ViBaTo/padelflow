@@ -5,11 +5,11 @@ import {
   CardTitle,
   CardSubtitle,
   CardContent
-} from './ui/Card'
+} from './ui/card'
 import { Heading, Text, Muted, Lead } from './ui/Typography'
-import { Button } from './ui/Button'
-import { Input } from './ui/Input'
-import { Alert } from './ui/Alert'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Alert } from './ui/alert'
 
 export function TypographyDemo() {
   return (

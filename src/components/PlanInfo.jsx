@@ -6,8 +6,8 @@ import {
   CardHeader,
   CardTitle,
   CardSubtitle
-} from './ui/Card'
-import { Button } from './ui/Button'
+} from './ui/card'
+import { Button } from './ui/button'
 import { Heading, Text, Muted } from './ui/Typography'
 import { componentClasses, designTokens } from '../lib/designTokens'
 import {
