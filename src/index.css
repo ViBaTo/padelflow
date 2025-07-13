@@ -1,7 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap');
 @import 'tailwindcss';
-@import 'flowbite/src/themes/default';
-@import 'flowbite';
-@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -48,6 +46,11 @@ a:hover {
 /* Todos los botones con cursor pointer */
 button {
   cursor: pointer;
+}
+
+/* Evitar conflictos con los gradientes */
+button:not([style*='background']) {
+  background: inherit !important;
 }
 
 @keyframes fade-in-right {
@@ -184,6 +187,189 @@ td {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Animaciones para los componentes de shadcn */
+@keyframes animate-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes animate-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes fade-in-0 {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out-0 {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes zoom-in-95 {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes zoom-out-95 {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes slide-in-from-top-2 {
+  from {
+    transform: translateY(-0.5rem);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-from-bottom-2 {
+  from {
+    transform: translateY(0.5rem);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-from-left-2 {
+  from {
+    transform: translateX(-0.5rem);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-from-right-2 {
+  from {
+    transform: translateX(0.5rem);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Clases de animación */
+.animate-in {
+  animation: animate-in 0.2s ease-out;
+}
+
+.animate-out {
+  animation: animate-out 0.2s ease-in;
+}
+
+.fade-in-0 {
+  animation: fade-in-0 0.2s ease-out;
+}
+
+.fade-out-0 {
+  animation: fade-out-0 0.2s ease-in;
+}
+
+.zoom-in-95 {
+  animation: zoom-in-95 0.2s ease-out;
+}
+
+.zoom-out-95 {
+  animation: zoom-out-95 0.2s ease-in;
+}
+
+.slide-in-from-top-2 {
+  animation: slide-in-from-top-2 0.2s ease-out;
+}
+
+.slide-in-from-bottom-2 {
+  animation: slide-in-from-bottom-2 0.2s ease-out;
+}
+
+.slide-in-from-left-2 {
+  animation: slide-in-from-left-2 0.2s ease-out;
+}
+
+.slide-in-from-right-2 {
+  animation: slide-in-from-right-2 0.2s ease-out;
+}
+
+/* Clases de tamaño */
+.size-4 {
+  width: 1rem;
+  height: 1rem;
+}
+
+.size-3\.5 {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* Clases de sombra */
+.shadow-xs {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Clases de outline */
+.outline-hidden {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+/* Clases de line-clamp */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+/* Estilos específicos para el calendario */
+.calendar-controls {
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+/* Asegurar que los botones de vista no se corten */
+.view-selector-button {
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: auto;
 }
 
 /* Drag and drop styles */

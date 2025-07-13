@@ -6,13 +6,24 @@ import {
   Users,
   MapPin,
   FileText,
-  X,
   Plus,
-  Trash2
+  AlertTriangle
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from './ui/dialog'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { designTokens, componentClasses } from '../lib/designTokens'
 
 const CLASS_TYPES = {
   'Clase Individual': {
@@ -23,17 +34,11 @@ const CLASS_TYPES = {
     color: 'bg-blue-100 text-blue-800 border-blue-200',
     icon: Users
   },
-  Entrenamiento: {
-    color: 'bg-green-100 text-green-800 border-green-200',
-    icon: Clock
-  },
   Academia: {
     color: 'bg-purple-100 text-purple-800 border-purple-200',
     icon: Calendar
   }
 }
-
-const CANCHAS = ['Cancha 1', 'Cancha 2', 'Cancha 3', 'Cancha 4']
 
 export function NewEventModal({
   open,
@@ -41,19 +46,25 @@ export function NewEventModal({
   onSave,
   selectedDate,
   profesores = [],
-  alumnos = []
+  alumnos = [],
+  canchas = [],
+  inscripciones = [], // 🆕 Agregar inscripciones para obtener paquetes
+  paquetes = [], // 🆕 Agregar paquetes para mostrar nombres
+  initialData = null
 }) {
   const [formData, setFormData] = useState({
     titulo: '',
     fecha: selectedDate
       ? format(selectedDate, 'yyyy-MM-dd')
       : format(new Date(), 'yyyy-MM-dd'),
-    horaInicio: '09:00',
-    horaFin: '10:00',
+    horaInicio: initialData?.startTime || '09:00',
+    horaFin: initialData?.endTime || '10:00',
     tipo: 'Clase Individual',
     profesorId: '',
     alumnosSeleccionados: [],
-    cancha: 'Cancha 1',
+    paqueteSeleccionado: '', // 🆕 Paquete seleccionado
+    cancha:
+      initialData?.cancha || (canchas.length > 0 ? canchas[0].nombre : ''),
     descripcion: '',
     estado: 'confirmada'
   })
@@ -63,7 +74,94 @@ export function NewEventModal({
   const [success, setSuccess] = useState(null)
   const [error, setError] = useState(null)
 
-  if (!open) return null
+  // 🆕 Función para obtener paquetes activos del alumno seleccionado
+  const getPaquetesDelAlumno = (cedulaAlumno) => {
+    if (!cedulaAlumno) return []
+
+    return inscripciones
+      .filter(
+        (inscripcion) =>
+          inscripcion.cedula_alumno === cedulaAlumno &&
+          inscripcion.estado === 'ACTIVO' &&
+          (inscripcion.clases_restantes > 0 ||
+            inscripcion.clases_totales - inscripcion.clases_utilizadas > 0)
+      )
+      .map((inscripcion) => {
+        const paquete = paquetes.find(
+          (p) => p.codigo === inscripcion.codigo_paquete
+        )
+        const clasesRestantes =
+          inscripcion.clases_restantes ||
+          inscripcion.clases_totales - inscripcion.clases_utilizadas
+
+        return {
+          ...inscripcion,
+          nombrePaquete: paquete ? paquete.nombre : inscripcion.codigo_paquete,
+          clasesRestantes: clasesRestantes
+        }
+      })
+  }
+
+  // Efecto para actualizar el formulario cuando cambien los props
+  useEffect(() => {
+    if (open) {
+      const fechaFormateada = selectedDate
+        ? format(selectedDate, 'yyyy-MM-dd')
+        : format(new Date(), 'yyyy-MM-dd')
+
+      const horaInicio = initialData?.startTime || '09:00'
+      let horaFin = initialData?.endTime
+
+      // Si hay hora de inicio pero no de fin, calcular automáticamente (90 minutos después)
+      if (horaInicio && !horaFin) {
+        const [hours, minutes] = horaInicio.split(':').map(Number)
+        const inicioDate = new Date()
+        inicioDate.setHours(hours, minutes, 0, 0)
+        inicioDate.setTime(inicioDate.getTime() + 90 * 60 * 1000) // 90 minutos
+        horaFin = `${inicioDate
+          .getHours()
+          .toString()
+          .padStart(2, '0')}:${inicioDate
+          .getMinutes()
+          .toString()
+          .padStart(2, '0')}`
+      }
+
+      if (!horaFin) {
+        horaFin = '10:00'
+      }
+
+      const nuevosData = {
+        titulo: '',
+        fecha: fechaFormateada,
+        horaInicio: horaInicio,
+        horaFin: horaFin,
+        tipo: 'Clase Individual',
+        profesorId: '',
+        alumnosSeleccionados: [],
+        paqueteSeleccionado: '', // 🆕 Reset paquete
+        cancha:
+          initialData?.cancha || (canchas.length > 0 ? canchas[0].nombre : ''),
+        descripcion: '',
+        estado: 'confirmada'
+      }
+
+      console.log('🎯 Datos preseleccionados en el modal:', {
+        fecha: fechaFormateada,
+        horaInicio: horaInicio,
+        horaFin: horaFin,
+        cancha: nuevosData.cancha,
+        hasInitialData: !!initialData
+      })
+
+      setFormData(nuevosData)
+
+      // Limpiar errores y mensajes
+      setErrors({})
+      setError(null)
+      setSuccess(null)
+    }
+  }, [open, selectedDate, initialData, canchas])
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -80,12 +178,31 @@ export function NewEventModal({
   }
 
   const handleAlumnoToggle = (alumnoId) => {
-    setFormData((prev) => ({
-      ...prev,
-      alumnosSeleccionados: prev.alumnosSeleccionados.includes(alumnoId)
-        ? prev.alumnosSeleccionados.filter((id) => id !== alumnoId)
-        : [...prev.alumnosSeleccionados, alumnoId]
-    }))
+    setFormData((prev) => {
+      let nuevosAlumnos
+
+      if (prev.alumnosSeleccionados.includes(alumnoId)) {
+        // Deseleccionar alumno
+        nuevosAlumnos = prev.alumnosSeleccionados.filter(
+          (id) => id !== alumnoId
+        )
+      } else {
+        // Seleccionar alumno
+        if (prev.tipo === 'Clase Individual') {
+          // Para clases individuales, solo un alumno
+          nuevosAlumnos = [alumnoId]
+        } else {
+          // Para clases grupales, agregar alumno
+          nuevosAlumnos = [...prev.alumnosSeleccionados, alumnoId]
+        }
+      }
+
+      return {
+        ...prev,
+        alumnosSeleccionados: nuevosAlumnos,
+        paqueteSeleccionado: '' // 🆕 Limpiar paquete cuando cambie alumno
+      }
+    })
   }
 
   const validateForm = () => {
@@ -127,6 +244,26 @@ export function NewEventModal({
       newErrors.alumnos = 'Las clases individuales solo pueden tener un alumno'
     }
 
+    // 🆕 Validar paquete seleccionado (solo si se selecciona uno)
+    if (
+      formData.tipo === 'Clase Individual' &&
+      formData.alumnosSeleccionados.length > 0 &&
+      formData.paqueteSeleccionado // Solo validar si hay un paquete seleccionado
+    ) {
+      // Validar que el paquete tenga clases restantes
+      const paquetesDisponibles = getPaquetesDelAlumno(
+        formData.alumnosSeleccionados[0]
+      )
+      const paqueteInfo = paquetesDisponibles.find(
+        (p) => p.codigo_paquete === formData.paqueteSeleccionado
+      )
+
+      if (!paqueteInfo || paqueteInfo.clasesRestantes <= 0) {
+        newErrors.paquete =
+          'El paquete seleccionado no tiene clases disponibles'
+      }
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -149,34 +286,20 @@ export function NewEventModal({
         endTime: formData.horaFin,
         type: formData.tipo,
         profesor: formData.profesorId,
+        students: formData.alumnosSeleccionados, // Cambiado para que coincida con el handler
         alumnos: formData.alumnosSeleccionados.map((id) => {
           const alumno = alumnos.find((a) => a.cedula === id)
           return alumno ? alumno.nombre_completo : id
         }),
         cancha: formData.cancha,
-        title: formData.titulo
+        title: formData.titulo,
+        packageCode: formData.paqueteSeleccionado // 🆕 Agregar código del paquete
       }
 
       await onSave(eventData)
       setSuccess('Evento creado correctamente')
 
-      // Reset form
-      setFormData({
-        titulo: '',
-        fecha: selectedDate
-          ? format(selectedDate, 'yyyy-MM-dd')
-          : format(new Date(), 'yyyy-MM-dd'),
-        horaInicio: '09:00',
-        horaFin: '10:00',
-        tipo: 'Clase Individual',
-        profesorId: '',
-        alumnosSeleccionados: [],
-        cancha: 'Cancha 1',
-        descripcion: '',
-        estado: 'confirmada'
-      })
-
-      // Cerrar modal después de un delay
+      // Cerrar modal después de un delay - el formulario se resetea automáticamente cuando se reabre
       setTimeout(() => {
         onClose()
       }, 1500)
@@ -189,117 +312,153 @@ export function NewEventModal({
   }
 
   return (
-    <div
-      className='fixed inset-0 z-50 flex justify-center items-center bg-black/50'
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose()
-        }
-      }}
-    >
-      <div className='relative bg-white w-full max-w-4xl rounded-xl shadow-lg p-6 overflow-y-auto max-h-[90vh]'>
-        <button
-          className='absolute top-4 right-6 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'
-          onClick={onClose}
-          aria-label='Cerrar'
-        >
-          ×
-        </button>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className='sm:max-w-4xl max-h-[90vh] overflow-y-auto'>
+        <DialogHeader>
+          <DialogTitle
+            className={`${designTokens.typography.h3} ${designTokens.text.primary} flex items-center space-x-2`}
+          >
+            <Plus className='w-6 h-6 text-blue-600' />
+            <span>Nuevo Evento</span>
+          </DialogTitle>
+          <DialogDescription className={designTokens.text.secondary}>
+            Crea un nuevo evento en el calendario del club
+          </DialogDescription>
 
-        {/* Header */}
-        <div className='mb-6'>
-          <h2 className='text-2xl font-bold flex items-center gap-2'>
-            <Plus className='w-5 h-5 text-blue-600' /> Nuevo Evento
-          </h2>
-          <p className='text-gray-600 mt-1'>
-            Crea un nuevo evento en el calendario
-          </p>
-        </div>
+          {/* Indicador de datos preseleccionados */}
+          {(selectedDate || initialData) && (
+            <div className='mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+              <div className='flex items-center space-x-2 text-sm text-blue-700'>
+                <Calendar className='w-4 h-4' />
+                <span className='font-medium'>Datos preseleccionados:</span>
+              </div>
+              <div className='mt-2 text-sm text-blue-600 space-y-1'>
+                {selectedDate && (
+                  <div>
+                    📅 Fecha:{' '}
+                    {format(selectedDate, "dd 'de' MMMM, yyyy", { locale: es })}
+                  </div>
+                )}
+                {initialData?.startTime && (
+                  <div>⏰ Hora: {initialData.startTime}</div>
+                )}
+                {initialData?.cancha && (
+                  <div>🏟️ Cancha: {initialData.cancha}</div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className='space-y-6'>
+          {/* Mensajes de estado */}
+          {error && (
+            <div className={componentClasses.errorMessage}>
+              <AlertTriangle className='w-4 h-4 text-red-500 flex-shrink-0' />
+              <span className='text-sm'>{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div className={componentClasses.successMessage}>
+              <span className='text-sm'>{success}</span>
+            </div>
+          )}
+
           {/* Información básica del evento */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='text-lg flex items-center gap-2'>
-                <Calendar className='w-4 h-4' /> Información del Evento
+          <Card className={componentClasses.mainCard}>
+            <CardHeader className={componentClasses.cardHeader}>
+              <CardTitle
+                className={`${componentClasses.cardHeaderTitle} flex items-center gap-2`}
+              >
+                <Calendar className='w-5 h-5' /> Información del Evento
               </CardTitle>
             </CardHeader>
-            <CardContent className='space-y-6'>
+            <CardContent
+              className={`${componentClasses.cardContent} space-y-6`}
+            >
               {/* Título */}
               <div>
-                <label className='text-sm font-medium text-gray-700 mb-2 block'>
+                <Label className={componentClasses.label}>
                   Título del evento *
-                </label>
-                <input
-                  type='text'
+                </Label>
+                <Input
                   value={formData.titulo}
                   onChange={(e) => handleInputChange('titulo', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.titulo ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={
+                    errors.titulo
+                      ? componentClasses.inputError
+                      : componentClasses.input
+                  }
                   placeholder='Ej: Clase de pádel - Principiantes'
                 />
                 {errors.titulo && (
-                  <p className='text-red-500 text-sm mt-1'>{errors.titulo}</p>
+                  <p className={`${designTokens.text.error} text-sm mt-1`}>
+                    {errors.titulo}
+                  </p>
                 )}
               </div>
 
               {/* Fecha y Hora */}
               <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                 <div>
-                  <label className='text-sm font-medium text-gray-700 mb-2 block'>
-                    Fecha *
-                  </label>
-                  <input
+                  <Label className={componentClasses.label}>Fecha *</Label>
+                  <Input
                     type='date'
                     value={formData.fecha}
                     onChange={(e) => handleInputChange('fecha', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.fecha ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    className={
+                      errors.fecha
+                        ? componentClasses.inputError
+                        : componentClasses.input
+                    }
                   />
                   {errors.fecha && (
-                    <p className='text-red-500 text-sm mt-1'>{errors.fecha}</p>
+                    <p className={`${designTokens.text.error} text-sm mt-1`}>
+                      {errors.fecha}
+                    </p>
                   )}
                 </div>
 
                 <div>
-                  <label className='text-sm font-medium text-gray-700 mb-2 block'>
+                  <Label className={componentClasses.label}>
                     Hora inicio *
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type='time'
                     value={formData.horaInicio}
                     onChange={(e) =>
                       handleInputChange('horaInicio', e.target.value)
                     }
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.horaInicio ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    className={
+                      errors.horaInicio
+                        ? componentClasses.inputError
+                        : componentClasses.input
+                    }
                   />
                   {errors.horaInicio && (
-                    <p className='text-red-500 text-sm mt-1'>
+                    <p className={`${designTokens.text.error} text-sm mt-1`}>
                       {errors.horaInicio}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className='text-sm font-medium text-gray-700 mb-2 block'>
-                    Hora fin *
-                  </label>
-                  <input
+                  <Label className={componentClasses.label}>Hora fin *</Label>
+                  <Input
                     type='time'
                     value={formData.horaFin}
                     onChange={(e) =>
                       handleInputChange('horaFin', e.target.value)
                     }
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.horaFin ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    className={
+                      errors.horaFin
+                        ? componentClasses.inputError
+                        : componentClasses.input
+                    }
                   />
                   {errors.horaFin && (
-                    <p className='text-red-500 text-sm mt-1'>
+                    <p className={`${designTokens.text.error} text-sm mt-1`}>
                       {errors.horaFin}
                     </p>
                   )}
@@ -309,13 +468,13 @@ export function NewEventModal({
               {/* Tipo de clase y Cancha */}
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 <div>
-                  <label className='text-sm font-medium text-gray-700 mb-2 block'>
+                  <Label className={componentClasses.label}>
                     Tipo de clase *
-                  </label>
+                  </Label>
                   <select
                     value={formData.tipo}
                     onChange={(e) => handleInputChange('tipo', e.target.value)}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                    className={componentClasses.input}
                   >
                     {Object.keys(CLASS_TYPES).map((type) => (
                       <option key={type} value={type}>
@@ -326,19 +485,18 @@ export function NewEventModal({
                 </div>
 
                 <div>
-                  <label className='text-sm font-medium text-gray-700 mb-2 block'>
-                    Cancha *
-                  </label>
+                  <Label className={componentClasses.label}>Cancha *</Label>
                   <select
                     value={formData.cancha}
                     onChange={(e) =>
                       handleInputChange('cancha', e.target.value)
                     }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                    className={componentClasses.input}
                   >
-                    {CANCHAS.map((cancha) => (
-                      <option key={cancha} value={cancha}>
-                        {cancha}
+                    <option value=''>Selecciona una cancha</option>
+                    {canchas.map((cancha) => (
+                      <option key={cancha.id_cancha} value={cancha.nombre}>
+                        {cancha.nombre} ({cancha.tipo})
                       </option>
                     ))}
                   </select>
@@ -348,26 +506,30 @@ export function NewEventModal({
           </Card>
 
           {/* Participantes */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='text-lg flex items-center gap-2'>
-                <Users className='w-4 h-4' /> Participantes
+          <Card className={componentClasses.mainCard}>
+            <CardHeader className={componentClasses.cardHeader}>
+              <CardTitle
+                className={`${componentClasses.cardHeaderTitle} flex items-center gap-2`}
+              >
+                <Users className='w-5 h-5' /> Participantes
               </CardTitle>
             </CardHeader>
-            <CardContent className='space-y-6'>
+            <CardContent
+              className={`${componentClasses.cardContent} space-y-6`}
+            >
               {/* Profesor */}
               <div>
-                <label className='text-sm font-medium text-gray-700 mb-2 block'>
-                  Profesor *
-                </label>
+                <Label className={componentClasses.label}>Profesor *</Label>
                 <select
                   value={formData.profesorId}
                   onChange={(e) =>
                     handleInputChange('profesorId', e.target.value)
                   }
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.profesorId ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={
+                    errors.profesorId
+                      ? componentClasses.inputError
+                      : componentClasses.input
+                  }
                 >
                   <option value=''>Selecciona un profesor</option>
                   {profesores.map((profesor) => (
@@ -380,7 +542,7 @@ export function NewEventModal({
                   ))}
                 </select>
                 {errors.profesorId && (
-                  <p className='text-red-500 text-sm mt-1'>
+                  <p className={`${designTokens.text.error} text-sm mt-1`}>
                     {errors.profesorId}
                   </p>
                 )}
@@ -388,17 +550,19 @@ export function NewEventModal({
 
               {/* Alumnos */}
               <div>
-                <label className='text-sm font-medium text-gray-700 mb-2 block'>
+                <Label className={componentClasses.label}>
                   Alumnos *
                   {formData.tipo === 'Clase Individual' && (
-                    <span className='text-xs text-gray-500 ml-1'>
+                    <span className={`text-xs ${designTokens.text.muted} ml-1`}>
                       (máximo 1 para clase individual)
                     </span>
                   )}
-                </label>
-                <div className='border border-gray-300 rounded-lg p-3 max-h-40 overflow-y-auto bg-gray-50'>
+                </Label>
+                <div
+                  className={`${designTokens.borders.input} ${designTokens.rounded.input} p-3 max-h-40 overflow-y-auto ${designTokens.backgrounds.card}`}
+                >
                   {alumnos.length === 0 ? (
-                    <p className='text-gray-500 text-sm'>
+                    <p className={`${designTokens.text.muted} text-sm`}>
                       No hay alumnos disponibles
                     </p>
                   ) : (
@@ -406,7 +570,7 @@ export function NewEventModal({
                       {alumnos.map((alumno) => (
                         <label
                           key={alumno.cedula}
-                          className='flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-2 rounded'
+                          className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded ${designTokens.transitions.colors}`}
                         >
                           <input
                             type='checkbox'
@@ -416,7 +580,9 @@ export function NewEventModal({
                             onChange={() => handleAlumnoToggle(alumno.cedula)}
                             className='text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
                           />
-                          <span className='text-sm text-gray-700'>
+                          <span
+                            className={`text-sm ${designTokens.text.primary}`}
+                          >
                             {alumno.nombre_completo}
                           </span>
                         </label>
@@ -425,78 +591,163 @@ export function NewEventModal({
                   )}
                 </div>
                 {errors.alumnos && (
-                  <p className='text-red-500 text-sm mt-1'>{errors.alumnos}</p>
+                  <p className={`${designTokens.text.error} text-sm mt-1`}>
+                    {errors.alumnos}
+                  </p>
                 )}
               </div>
+
+              {/* 🆕 Selección de Paquete */}
+              {formData.tipo === 'Clase Individual' &&
+                formData.alumnosSeleccionados.length === 1 && (
+                  <div>
+                    <Label className={componentClasses.label}>
+                      Paquete a descontar (opcional)
+                      <span
+                        className={`text-xs ${designTokens.text.muted} ml-1`}
+                      >
+                        (se descontará 1 clase del paquete seleccionado)
+                      </span>
+                    </Label>
+
+                    {(() => {
+                      const paquetesDisponibles = getPaquetesDelAlumno(
+                        formData.alumnosSeleccionados[0]
+                      )
+
+                      if (paquetesDisponibles.length === 0) {
+                        return (
+                          <div>
+                            <select
+                              value={formData.paqueteSeleccionado}
+                              onChange={(e) =>
+                                handleInputChange(
+                                  'paqueteSeleccionado',
+                                  e.target.value
+                                )
+                              }
+                              className={
+                                errors.paquete
+                                  ? componentClasses.inputError
+                                  : componentClasses.input
+                              }
+                            >
+                              <option value=''>
+                                Sin paquete (clase individual)
+                              </option>
+                            </select>
+                            <div className='mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg'>
+                              <p
+                                className={`${designTokens.text.muted} text-sm flex items-center`}
+                              >
+                                <AlertTriangle className='w-4 h-4 mr-2 text-yellow-500' />
+                                Este alumno no tiene paquetes activos con clases
+                                disponibles. La clase se creará sin descontar de
+                                ningún paquete.
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      return (
+                        <select
+                          value={formData.paqueteSeleccionado}
+                          onChange={(e) =>
+                            handleInputChange(
+                              'paqueteSeleccionado',
+                              e.target.value
+                            )
+                          }
+                          className={
+                            errors.paquete
+                              ? componentClasses.inputError
+                              : componentClasses.input
+                          }
+                        >
+                          <option value=''>
+                            Sin paquete (clase individual)
+                          </option>
+                          {paquetesDisponibles.map((paquete) => (
+                            <option
+                              key={paquete.codigo_paquete}
+                              value={paquete.codigo_paquete}
+                            >
+                              {paquete.nombrePaquete} -{' '}
+                              {paquete.clasesRestantes} clases restantes
+                            </option>
+                          ))}
+                        </select>
+                      )
+                    })()}
+
+                    {errors.paquete && (
+                      <p className={`${designTokens.text.error} text-sm mt-1`}>
+                        {errors.paquete}
+                      </p>
+                    )}
+                  </div>
+                )}
             </CardContent>
           </Card>
 
           {/* Detalles adicionales */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='text-lg flex items-center gap-2'>
-                <FileText className='w-4 h-4' /> Detalles Adicionales
+          <Card className={componentClasses.mainCard}>
+            <CardHeader className={componentClasses.cardHeader}>
+              <CardTitle
+                className={`${componentClasses.cardHeaderTitle} flex items-center gap-2`}
+              >
+                <FileText className='w-5 h-5' /> Detalles Adicionales
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className={componentClasses.cardContent}>
               <div>
-                <label className='text-sm font-medium text-gray-700 mb-2 block'>
+                <Label className={componentClasses.label}>
                   Descripción (opcional)
-                </label>
+                </Label>
                 <textarea
                   value={formData.descripcion}
                   onChange={(e) =>
                     handleInputChange('descripcion', e.target.value)
                   }
                   rows={3}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                  className={componentClasses.input}
                   placeholder='Detalles adicionales del evento...'
                 />
               </div>
             </CardContent>
           </Card>
-
-          {/* Botones */}
-          <div className='flex gap-3 pt-4'>
-            <button
-              type='button'
-              onClick={onClose}
-              className='flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors'
-            >
-              Cancelar
-            </button>
-            <button
-              type='submit'
-              disabled={isSubmitting}
-              className='flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2'
-            >
-              {isSubmitting ? (
-                <>
-                  <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Plus className='w-4 h-4' />
-                  Crear Evento
-                </>
-              )}
-            </button>
-          </div>
         </form>
 
-        {/* Messages */}
-        {error && (
-          <div className='fixed bottom-4 right-4 bg-red-100 border border-red-200 text-red-700 px-4 py-2 rounded-lg shadow-lg'>
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className='fixed bottom-4 right-4 bg-green-100 border border-green-200 text-green-700 px-4 py-2 rounded-lg shadow-lg'>
-            {success}
-          </div>
-        )}
-      </div>
-    </div>
+        <DialogFooter className='flex flex-col sm:flex-row gap-3 pt-4'>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={onClose}
+            className='flex-1'
+          >
+            Cancelar
+          </Button>
+          <Button
+            type='submit'
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className={`flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white`}
+          >
+            {isSubmitting ? (
+              <>
+                <div className={componentClasses.spinner} />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Plus className='w-4 h-4 mr-2' />
+                Crear Evento
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -12,6 +12,24 @@ import {
   Tag
 } from 'lucide-react'
 import { formatCurrency } from '../../lib/utils'
+import { componentClasses, designTokens } from '../../lib/designTokens'
+import { Button } from '../../components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from '../../components/ui/card'
+import { Input } from '../../components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '../../components/ui/select'
+import { Badge } from '../../components/ui/badge'
+import { Heading, Text } from '../../components/ui/Typography'
 
 export function Paquetes() {
   const [paquetes, setPaquetes] = useState([])
@@ -152,299 +170,333 @@ export function Paquetes() {
 
   // Badges
   const getTipoServicioBadge = (tipo) => {
-    if (!tipo) return <span className='text-gray-400'>N/A</span>
-    const colors = {
-      CONDFIS: 'bg-blue-100 text-blue-800',
-      ACADEMIA: 'bg-green-100 text-green-800',
-      CLINICA: 'bg-purple-100 text-purple-800',
-      PROFESOR_A: 'bg-yellow-100 text-yellow-800',
-      PROFESOR_B: 'bg-pink-100 text-pink-800',
-      INTENSIVO: 'bg-orange-100 text-orange-800',
-      OTRO: 'bg-gray-100 text-gray-800'
+    if (!tipo) return <Badge variant='secondary'>N/A</Badge>
+    const variants = {
+      CONDFIS: 'default',
+      ACADEMIA: 'secondary',
+      CLINICA: 'secondary',
+      PROFESOR_A: 'secondary',
+      PROFESOR_B: 'secondary',
+      INTENSIVO: 'secondary',
+      OTRO: 'secondary'
     }
-    return (
-      <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${
-          colors[tipo] || colors['OTRO']
-        }`}
-      >
-        {tipo}
-      </span>
-    )
+    return <Badge variant={variants[tipo] || 'secondary'}>{tipo}</Badge>
   }
 
   if (loading) return <p>Cargando...</p>
   if (error) return <p className='text-red-500'>Error: {error}</p>
 
   return (
-    <div className='flex flex-col flex-1 min-h-screen p-6 bg-gray-50'>
-      {/* Header e indicadores */}
-      <div>
+    <div className={componentClasses.pageContainer}>
+      <div className='p-3 lg:p-4 max-w-7xl mx-auto space-y-4'>
         {/* Header */}
-        <div className='flex justify-between items-center'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
           <div>
-            <h1 className='text-3xl font-bold text-gray-900'>Paquetes</h1>
-            <p className='text-gray-600 mt-1'>
+            <Heading level={1} className='mb-1'>
+              Paquetes
+            </Heading>
+            <Text variant='lead' className={designTokens.text.secondary}>
               Gestiona los paquetes de servicios del club
-            </p>
+            </Text>
           </div>
-          <button
-            className='bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold shadow flex items-center text-sm'
-            onClick={() => setShowModal(true)}
-          >
+          <Button size='sm' onClick={() => setShowModal(true)}>
             <Plus className='w-4 h-4 mr-2' />
             Nuevo Paquete
-          </button>
+          </Button>
         </div>
         {/* Stats Cards */}
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 my-6'>
-          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm font-medium text-gray-600'>
-                Total Paquetes
-              </span>
-              <Package className='h-4 w-4 text-blue-600' />
-            </div>
-            <div className='text-2xl font-bold text-gray-900'>
-              {totalPaquetes}
-            </div>
-            <p className='text-xs text-gray-500 mt-1'>Paquetes disponibles</p>
-          </div>
-          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm font-medium text-gray-600'>
-                Ingresos Totales
-              </span>
-              <DollarSign className='h-4 w-4 text-green-600' />
-            </div>
-            <div className='text-2xl font-bold text-gray-900'>
-              {formatCurrency(totalIngresos)}
-            </div>
-            <p className='text-xs text-gray-500 mt-1'>
-              Valor total de paquetes
-            </p>
-          </div>
-          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm font-medium text-gray-600'>
-                Servicios
-              </span>
-              <Tag className='h-4 w-4 text-blue-600' />
-            </div>
-            <div className='text-2xl font-bold text-gray-900'>
-              {tiposServicioUnicos.length}
-            </div>
-            <p className='text-xs text-gray-500 mt-1'>Tipos de paquetes</p>
-          </div>
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+          <Card>
+            <CardContent className='p-4'>
+              <div className='flex items-center justify-between'>
+                <Text variant='caption' className={designTokens.text.muted}>
+                  Total Paquetes
+                </Text>
+                <Package className='h-4 w-4 text-blue-600' />
+              </div>
+              <Heading level={2} className='mt-1 mb-1'>
+                {totalPaquetes}
+              </Heading>
+              <Text variant='small' className={designTokens.text.muted}>
+                Paquetes disponibles
+              </Text>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className='p-4'>
+              <div className='flex items-center justify-between'>
+                <Text variant='caption' className={designTokens.text.muted}>
+                  Ingresos Totales
+                </Text>
+                <DollarSign className='h-4 w-4 text-green-600' />
+              </div>
+              <Heading level={2} className='mt-1 mb-1'>
+                {formatCurrency(totalIngresos)}
+              </Heading>
+              <Text variant='small' className={designTokens.text.muted}>
+                Valor total de paquetes
+              </Text>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className='p-4'>
+              <div className='flex items-center justify-between'>
+                <Text variant='caption' className={designTokens.text.muted}>
+                  Servicios
+                </Text>
+                <Tag className='h-4 w-4 text-blue-600' />
+              </div>
+              <Heading level={2} className='mt-1 mb-1'>
+                {tiposServicioUnicos.length}
+              </Heading>
+              <Text variant='small' className={designTokens.text.muted}>
+                Tipos de paquetes
+              </Text>
+            </CardContent>
+          </Card>
         </div>
         {/* Filtros y búsqueda */}
-        <div className='bg-white rounded-xl border border-gray-200 p-6 mt-4'>
-          <div className='flex flex-col sm:flex-row gap-4 items-center justify-between'>
-            <h2 className='text-lg font-semibold text-gray-900'>
-              Lista de Paquetes
-            </h2>
-            <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
-                <input
-                  type='text'
-                  placeholder='Buscar Paquetes...'
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className='pl-10 border border-gray-200 rounded-lg py-2 w-full sm:w-64 text-sm focus:ring-2 focus:ring-blue-100 focus:outline-none'
-                />
-              </div>
-              <div className='relative' ref={filterDropdownRef}>
-                <button
-                  className='flex items-center border border-gray-200 px-4 py-2 rounded-lg text-gray-700 bg-white text-sm font-medium hover:bg-gray-50 transition'
-                  onClick={() => setShowFilterDropdown((v) => !v)}
-                  type='button'
-                >
-                  <Filter className='w-4 h-4 mr-2' />
-                  Filtros
-                </button>
-                {showFilterDropdown && (
-                  <div className='absolute right-0 mt-2 w-40 bg-white border rounded-xl shadow z-10 p-3'>
-                    <label className='block text-xs font-semibold mb-1 text-gray-700'>
-                      Tipo de Servicio
-                    </label>
-                    <select
-                      value={filterTipoServicio}
-                      onChange={(e) => setFilterTipoServicio(e.target.value)}
-                      className='w-full border border-gray-200 p-2 rounded-lg text-sm'
-                    >
-                      <option value='TODOS'>Todos</option>
-                      {tiposServicioUnicos.length > 0 ? (
-                        tiposServicioUnicos.map((tipo) => (
-                          <option key={tipo} value={tipo}>
-                            {tipo}
-                          </option>
-                        ))
-                      ) : (
-                        <option value='' disabled>
-                          No hay tipos de servicio
-                        </option>
-                      )}
-                    </select>
-                  </div>
-                )}
+        <Card>
+          <CardHeader className='p-4'>
+            <div className='flex flex-col sm:flex-row gap-3 items-center justify-between'>
+              <CardTitle className='text-base'>Lista de Paquetes</CardTitle>
+              <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
+                  <Input
+                    type='text'
+                    placeholder='Buscar Paquetes...'
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className='pl-10 w-full sm:w-64'
+                  />
+                </div>
+                <div className='relative' ref={filterDropdownRef}>
+                  <Button
+                    variant='secondary'
+                    size='sm'
+                    onClick={() => setShowFilterDropdown((v) => !v)}
+                    type='button'
+                  >
+                    <Filter className='w-4 h-4 mr-2' />
+                    Filtros
+                  </Button>
+                  {showFilterDropdown && (
+                    <div className='absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-lg z-10 p-3'>
+                      <Text
+                        variant='small'
+                        className='block font-semibold mb-2 text-gray-700'
+                      >
+                        Tipo de Servicio
+                      </Text>
+                      <Select
+                        value={filterTipoServicio}
+                        onValueChange={setFilterTipoServicio}
+                      >
+                        <SelectTrigger className='w-full'>
+                          <SelectValue placeholder='Seleccionar tipo' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='TODOS'>Todos</SelectItem>
+                          {tiposServicioUnicos.length > 0 ? (
+                            tiposServicioUnicos.map((tipo) => (
+                              <SelectItem key={tipo} value={tipo}>
+                                {tipo}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value='' disabled>
+                              No hay tipos de servicio
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-      {/* Listado con scroll */}
-      <div className='flex-1 overflow-y-auto mt-4'>
-        {/* Tabla de paquetes */}
-        <div className='overflow-x-auto'>
-          <table className='min-w-full bg-white rounded-xl border border-gray-200'>
-            <thead>
-              <tr className='bg-gray-50'>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Código
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Nombre
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Tipo de servicio
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Clases
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Precio con IVA
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className='divide-y divide-gray-100'>
-              {paginatedPaquetes.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan='6'
-                    className='px-6 py-8 text-center text-gray-500'
-                  >
-                    {paquetes.length === 0
-                      ? 'No hay paquetes registrados'
-                      : 'No se encontraron paquetes con los filtros aplicados'}
-                  </td>
-                </tr>
-              ) : (
-                paginatedPaquetes.map((paquete) => (
-                  <tr
-                    key={paquete.codigo}
-                    className='hover:bg-gray-50 transition'
-                    onContextMenu={(e) => handleContextMenu(e, paquete.codigo)}
-                  >
-                    <td className='px-6 py-4 text-sm text-gray-900'>
-                      {paquete.codigo || 'N/A'}
-                    </td>
-                    <td className='px-6 py-4 text-sm text-gray-900 font-medium'>
-                      {paquete.nombre || 'Sin nombre'}
-                    </td>
-                    <td className='px-6 py-4 text-sm text-gray-700'>
-                      {getTipoServicioBadge(paquete.tipo_servicio)}
-                    </td>
-                    <td className='px-6 py-4 text-sm text-gray-600'>
-                      {paquete.numero_clases || 0}
-                    </td>
-                    <td className='px-6 py-4 text-sm text-gray-900'>
-                      <span className='font-bold text-green-600'>
-                        {formatCurrency(
-                          (paquete.precio_con_iva || 0) *
-                            (paquete.numero_clases || 0)
-                        )}
-                      </span>
-                    </td>
-                    <td className='px-6 py-4'>
-                      <div className='flex space-x-2'>
-                        <button
-                          className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'
-                          onClick={() => {
-                            setSelectedPaquete(paquete)
-                            setShowDetailModal(true)
-                          }}
-                        >
-                          Ver
-                        </button>
-                      </div>
-                    </td>
+          </CardHeader>
+        </Card>
+
+        {/* Lista de paquetes */}
+        <Card>
+          <CardContent className='p-0'>
+            <div className='overflow-x-auto'>
+              <table className='min-w-full'>
+                <thead>
+                  <tr className='border-b bg-gray-50/50'>
+                    <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider'>
+                      Código
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider'>
+                      Nombre
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider'>
+                      Tipo de servicio
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider'>
+                      Clases
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider'>
+                      Precio Total
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider'>
+                      Acciones
+                    </th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className='divide-y divide-gray-100'>
+                  {paginatedPaquetes.length === 0 ? (
+                    <tr>
+                      <td colSpan='6' className='px-6 py-8 text-center'>
+                        <div className='flex flex-col items-center justify-center space-y-2'>
+                          <Package className='h-8 w-8 text-gray-400' />
+                          <Text
+                            variant='body'
+                            className={designTokens.text.muted}
+                          >
+                            {paquetes.length === 0
+                              ? 'No hay paquetes registrados'
+                              : 'No se encontraron paquetes con los filtros aplicados'}
+                          </Text>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedPaquetes.map((paquete) => (
+                      <tr
+                        key={paquete.codigo}
+                        className='hover:bg-gray-50/50 transition-colors'
+                        onContextMenu={(e) =>
+                          handleContextMenu(e, paquete.codigo)
+                        }
+                      >
+                        <td className='px-6 py-4 whitespace-nowrap'>
+                          <Text variant='body' className='font-mono text-sm'>
+                            {paquete.codigo || 'N/A'}
+                          </Text>
+                        </td>
+                        <td className='px-6 py-4'>
+                          <Text variant='body' className='font-medium'>
+                            {paquete.nombre || 'Sin nombre'}
+                          </Text>
+                        </td>
+                        <td className='px-6 py-4 whitespace-nowrap'>
+                          {getTipoServicioBadge(paquete.tipo_servicio)}
+                        </td>
+                        <td className='px-6 py-4 whitespace-nowrap'>
+                          <Text
+                            variant='body'
+                            className={designTokens.text.muted}
+                          >
+                            {paquete.numero_clases || 0}
+                          </Text>
+                        </td>
+                        <td className='px-6 py-4 whitespace-nowrap'>
+                          <Text
+                            variant='body'
+                            className='font-semibold text-green-600'
+                          >
+                            {formatCurrency(
+                              (paquete.precio_con_iva || 0) *
+                                (paquete.numero_clases || 0)
+                            )}
+                          </Text>
+                        </td>
+                        <td className='px-6 py-4 whitespace-nowrap'>
+                          <Button
+                            variant='secondary'
+                            size='sm'
+                            onClick={() => {
+                              setSelectedPaquete(paquete)
+                              setShowDetailModal(true)
+                            }}
+                          >
+                            Ver
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Paginación */}
         {totalPages > 1 && (
           <div className='flex gap-2 mt-4 items-center justify-end'>
-            <button
+            <Button
+              variant='secondary'
+              size='sm'
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
             >
               Anterior
-            </button>
-            <span className='text-xs text-gray-500'>
+            </Button>
+            <Text variant='small' className={designTokens.text.muted}>
               Página {currentPage} de {totalPages}
-            </span>
-            <button
+            </Text>
+            <Button
+              variant='secondary'
+              size='sm'
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
             >
               Siguiente
-            </button>
+            </Button>
           </div>
         )}
-      </div>
-      {/* Modal para añadir paquete */}
-      {showModal && (
-        <div className='fixed inset-0 z-50 flex justify-end bg-black/50 transition-opacity duration-300'>
-          <div className='relative bg-white h-full w-full max-w-lg border-l border-gray-200 px-8 py-8 overflow-y-auto animate-fade-in-right'>
-            <button
-              className='absolute top-4 right-6 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'
-              onClick={() => setShowModal(false)}
-              aria-label='Cerrar'
-            >
-              ×
-            </button>
-            <GenericForm
-              fields={paqueteFields}
-              initialValues={{}}
-              onSubmit={handleAdd}
-              submitText='Añadir paquete'
-            />
+
+        {/* Modales y menús contextuales */}
+        {showModal && (
+          <div className='fixed inset-0 z-50 flex justify-end bg-black/50 transition-opacity duration-300'>
+            <div className='relative bg-white h-full w-full max-w-lg border-l border-gray-200 px-8 py-8 overflow-y-auto animate-fade-in-right'>
+              <button
+                className='absolute top-4 right-6 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'
+                onClick={() => setShowModal(false)}
+                aria-label='Cerrar'
+              >
+                ×
+              </button>
+              <GenericForm
+                fields={paqueteFields}
+                initialValues={{}}
+                onSubmit={handleAdd}
+                submitText='Añadir paquete'
+              />
+            </div>
           </div>
-        </div>
-      )}
-      {/* Menú contextual */}
-      {contextMenu.visible && (
-        <ul
-          ref={contextMenuRef}
-          className='absolute z-50 bg-white border rounded shadow-md py-1 text-sm'
-          style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
-        >
-          <li>
-            <button
-              onClick={() => handleDelete(contextMenu.codigo)}
-              className='w-full text-left px-4 py-2 hover:bg-red-100 hover:text-red-600'
-            >
-              Eliminar
-            </button>
-          </li>
-        </ul>
-      )}
-      {/* Modal de detalle de paquete */}
-      <PaqueteDetailsModal
-        open={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        paquete={selectedPaquete}
-        onDataChange={fetchPaquetes}
-      />
+        )}
+        {/* Menú contextual */}
+        {contextMenu.visible && (
+          <ul
+            ref={contextMenuRef}
+            className='absolute z-50 bg-white border rounded shadow-md py-1 text-sm'
+            style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
+          >
+            <li>
+              <button
+                onClick={() => handleDelete(contextMenu.codigo)}
+                className='w-full text-left px-4 py-2 hover:bg-red-100 hover:text-red-600'
+              >
+                Eliminar
+              </button>
+            </li>
+          </ul>
+        )}
+        {/* Modal de detalle de paquete */}
+        <PaqueteDetailsModal
+          open={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          paquete={selectedPaquete}
+          onDataChange={fetchPaquetes}
+        />
+      </div>
     </div>
   )
 }

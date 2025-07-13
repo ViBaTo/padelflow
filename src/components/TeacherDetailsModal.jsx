@@ -1,4 +1,5 @@
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import {
   Mail,
   Phone,
@@ -8,10 +9,19 @@ import {
   Edit2,
   Award,
   Package,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Info
 } from 'lucide-react'
 import { supabase, db } from '../lib/supabase'
 import { useState, useEffect } from 'react'
+import {
+  designTokens,
+  componentClasses,
+  getButtonGradient,
+  getButtonHoverGradient
+} from '../lib/designTokens'
 
 export function TeacherDetailsModal({
   open,
@@ -22,8 +32,6 @@ export function TeacherDetailsModal({
   paquetes = [],
   onDataChange
 }) {
-  if (!open || !teacher) return null
-
   const [activeTab, setActiveTab] = useState('info') // 'info', 'paquetes', 'historial'
   const [isEditing, setIsEditing] = useState(false)
   const [error, setError] = useState(null)
@@ -38,19 +46,31 @@ export function TeacherDetailsModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Clear messages after 3 seconds
+  useEffect(() => {
+    if (error || success) {
+      const timer = setTimeout(() => {
+        setError(null)
+        setSuccess(null)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [error, success])
+
   // Utilidades para badges
   const getNivelBadge = (nivel) => {
     const colors = {
-      A: 'bg-red-100 text-red-800',
-      B: 'bg-orange-100 text-orange-800',
-      C: 'bg-yellow-100 text-yellow-800',
-      D: 'bg-green-100 text-green-800'
+      A: 'bg-gradient-to-r from-red-500 to-red-600 text-white',
+      B: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white',
+      C: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white',
+      D: 'bg-gradient-to-r from-green-500 to-green-600 text-white'
     }
     return (
       <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${
-          colors[nivel] || 'bg-gray-100 text-gray-800'
-        }`}
+        className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+          colors[nivel] ||
+          'bg-gradient-to-r from-gray-500 to-gray-600 text-white'
+        } ${designTokens.shadows.button}`}
       >
         Nivel {nivel}
       </span>
@@ -59,13 +79,13 @@ export function TeacherDetailsModal({
 
   const getAcademiaBadge = (puedeAcademia) => (
     <span
-      className={`px-2 py-1 rounded-full text-xs font-medium ${
+      className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
         puedeAcademia
-          ? 'bg-green-100 text-green-800'
-          : 'bg-gray-100 text-gray-800'
-      }`}
+          ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+          : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white'
+      } ${designTokens.shadows.button}`}
     >
-      {puedeAcademia ? 'Sí' : 'No'}
+      {puedeAcademia ? 'Academia: Sí' : 'Academia: No'}
     </span>
   )
 
@@ -311,11 +331,14 @@ export function TeacherDetailsModal({
   const TabButton = ({ tab, icon: Icon, label }) => (
     <button
       onClick={() => setActiveTab(tab)}
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-        activeTab === tab
-          ? 'bg-blue-50 text-blue-600'
-          : 'text-gray-600 hover:bg-gray-50'
-      }`}
+      className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2`}
+      style={{
+        backgroundColor: activeTab === tab ? '#3b82f6' : '#ffffff',
+        color: activeTab === tab ? '#ffffff' : '#374151',
+        border: activeTab === tab ? 'none' : '1px solid #d1d5db',
+        boxShadow:
+          activeTab === tab ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'
+      }}
     >
       <Icon className='w-4 h-4' />
       {label}
@@ -324,18 +347,19 @@ export function TeacherDetailsModal({
 
   const InfoTab = () => (
     <div className='space-y-6'>
-      <Card>
-        <CardHeader>
-          <CardTitle className='text-lg flex items-center gap-2'>
-            <User className='w-4 h-4' /> Información Personal
+      <Card className={componentClasses.mainCard}>
+        <CardHeader className='bg-gradient-to-r from-blue-500 to-indigo-600 text-white'>
+          <CardTitle className='text-xl flex items-center gap-2'>
+            <User className='w-5 h-5' />
+            Información Personal
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className='space-y-6'>
-            {/* Nombre */}
-            <div className='space-y-2'>
-              <label className='text-sm font-medium text-gray-700'>
-                Nombre completo
+        <CardContent className='p-6 space-y-4'>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+            <div className='space-y-1'>
+              <label className={componentClasses.label}>
+                <User className='w-4 h-4 inline mr-2' />
+                Nombre Completo
               </label>
               {editingField === 'nombre_completo' ? (
                 <div className='flex gap-2'>
@@ -343,148 +367,150 @@ export function TeacherDetailsModal({
                     type='text'
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    className='flex-1 px-3 py-2 border rounded-md'
-                    disabled={isSaving}
+                    className={componentClasses.input}
+                    autoFocus
                   />
                   <button
                     onClick={() =>
                       handleInlineEdit('nombre_completo', editValue)
                     }
                     disabled={isSaving}
-                    className='px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
+                    className='px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50'
                   >
-                    {isSaving ? 'Guardando...' : 'Guardar'}
+                    <CheckCircle className='w-4 h-4' />
                   </button>
                   <button
-                    onClick={() => setEditingField(null)}
-                    disabled={isSaving}
-                    className='px-3 py-2 border rounded-md hover:bg-gray-50 disabled:opacity-50'
+                    onClick={() => {
+                      setEditingField(null)
+                      setEditValue('')
+                    }}
+                    className='px-3 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-lg hover:from-gray-500 hover:to-gray-600 transition-all'
                   >
-                    Cancelar
+                    <XCircle className='w-4 h-4' />
                   </button>
                 </div>
               ) : (
-                <div className='flex justify-between items-center'>
-                  <span className='text-lg font-semibold'>
-                    {teacher.nombre_completo}
+                <div
+                  className='p-3 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between'
+                  onClick={() => {
+                    setEditingField('nombre_completo')
+                    setEditValue(teacher.nombre_completo || '')
+                  }}
+                >
+                  <span className={designTokens.text.primary}>
+                    {teacher.nombre_completo || 'No especificado'}
                   </span>
-                  <button
-                    onClick={() => {
-                      setEditingField('nombre_completo')
-                      setEditValue(teacher.nombre_completo)
-                    }}
-                    className='text-blue-600 hover:text-blue-700'
-                  >
-                    <Edit2 className='w-4 h-4' />
-                  </button>
+                  <Edit2 className='w-4 h-4 text-gray-400' />
                 </div>
               )}
             </div>
 
-            {/* Teléfono */}
-            <div className='space-y-2'>
-              <label className='text-sm font-medium text-gray-700'>
+            <div className='space-y-1'>
+              <label className={componentClasses.label}>
+                <Phone className='w-4 h-4 inline mr-2' />
                 Teléfono
               </label>
               {editingField === 'telefono' ? (
                 <div className='flex gap-2'>
                   <input
-                    type='tel'
+                    type='text'
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    className='flex-1 px-3 py-2 border rounded-md'
-                    disabled={isSaving}
+                    className={componentClasses.input}
+                    autoFocus
                   />
                   <button
                     onClick={() => handleInlineEdit('telefono', editValue)}
                     disabled={isSaving}
-                    className='px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
+                    className='px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50'
                   >
-                    {isSaving ? 'Guardando...' : 'Guardar'}
+                    <CheckCircle className='w-4 h-4' />
                   </button>
                   <button
-                    onClick={() => setEditingField(null)}
-                    disabled={isSaving}
-                    className='px-3 py-2 border rounded-md hover:bg-gray-50 disabled:opacity-50'
+                    onClick={() => {
+                      setEditingField(null)
+                      setEditValue('')
+                    }}
+                    className='px-3 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-lg hover:from-gray-500 hover:to-gray-600 transition-all'
                   >
-                    Cancelar
+                    <XCircle className='w-4 h-4' />
                   </button>
                 </div>
               ) : (
-                <div className='flex justify-between items-center'>
-                  <div className='flex items-center gap-2 text-gray-600'>
-                    <Phone className='w-4 h-4' />
-                    <span>{teacher.telefono}</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setEditingField('telefono')
-                      setEditValue(teacher.telefono)
-                    }}
-                    className='text-blue-600 hover:text-blue-700'
-                  >
-                    <Edit2 className='w-4 h-4' />
-                  </button>
+                <div
+                  className='p-3 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between'
+                  onClick={() => {
+                    setEditingField('telefono')
+                    setEditValue(teacher.telefono || '')
+                  }}
+                >
+                  <span className={designTokens.text.primary}>
+                    {teacher.telefono || 'No especificado'}
+                  </span>
+                  <Edit2 className='w-4 h-4 text-gray-400' />
                 </div>
               )}
             </div>
 
-            {/* Email */}
-            <div className='space-y-2'>
-              <label className='text-sm font-medium text-gray-700'>Email</label>
+            <div className='space-y-1'>
+              <label className={componentClasses.label}>
+                <Mail className='w-4 h-4 inline mr-2' />
+                Email
+              </label>
               {editingField === 'email' ? (
                 <div className='flex gap-2'>
                   <input
                     type='email'
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    className='flex-1 px-3 py-2 border rounded-md'
-                    disabled={isSaving}
+                    className={componentClasses.input}
+                    autoFocus
                   />
                   <button
                     onClick={() => handleInlineEdit('email', editValue)}
                     disabled={isSaving}
-                    className='px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
+                    className='px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50'
                   >
-                    {isSaving ? 'Guardando...' : 'Guardar'}
+                    <CheckCircle className='w-4 h-4' />
                   </button>
                   <button
-                    onClick={() => setEditingField(null)}
-                    disabled={isSaving}
-                    className='px-3 py-2 border rounded-md hover:bg-gray-50 disabled:opacity-50'
+                    onClick={() => {
+                      setEditingField(null)
+                      setEditValue('')
+                    }}
+                    className='px-3 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-lg hover:from-gray-500 hover:to-gray-600 transition-all'
                   >
-                    Cancelar
+                    <XCircle className='w-4 h-4' />
                   </button>
                 </div>
               ) : (
-                <div className='flex justify-between items-center'>
-                  <div className='flex items-center gap-2 text-gray-600'>
-                    <Mail className='w-4 h-4' />
-                    <span>{teacher.email || 'Sin email'}</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setEditingField('email')
-                      setEditValue(teacher.email || '')
-                    }}
-                    className='text-blue-600 hover:text-blue-700'
-                  >
-                    <Edit2 className='w-4 h-4' />
-                  </button>
+                <div
+                  className='p-3 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between'
+                  onClick={() => {
+                    setEditingField('email')
+                    setEditValue(teacher.email || '')
+                  }}
+                >
+                  <span className={designTokens.text.primary}>
+                    {teacher.email || 'No especificado'}
+                  </span>
+                  <Edit2 className='w-4 h-4 text-gray-400' />
                 </div>
               )}
             </div>
 
-            {/* Nivel */}
-            <div className='space-y-2'>
-              <label className='text-sm font-medium text-gray-700'>Nivel</label>
+            <div className='space-y-1'>
+              <label className={componentClasses.label}>
+                <Award className='w-4 h-4 inline mr-2' />
+                Nivel
+              </label>
               {editingField === 'nivel' ? (
                 <div className='flex gap-2'>
                   <select
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    className='flex-1 px-3 py-2 border rounded-md'
-                    disabled={isSaving}
+                    className={componentClasses.input}
+                    autoFocus
                   >
                     <option value='A'>Nivel A</option>
                     <option value='B'>Nivel B</option>
@@ -494,170 +520,162 @@ export function TeacherDetailsModal({
                   <button
                     onClick={() => handleInlineEdit('nivel', editValue)}
                     disabled={isSaving}
-                    className='px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
+                    className='px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50'
                   >
-                    {isSaving ? 'Guardando...' : 'Guardar'}
+                    <CheckCircle className='w-4 h-4' />
                   </button>
                   <button
-                    onClick={() => setEditingField(null)}
-                    disabled={isSaving}
-                    className='px-3 py-2 border rounded-md hover:bg-gray-50 disabled:opacity-50'
+                    onClick={() => {
+                      setEditingField(null)
+                      setEditValue('')
+                    }}
+                    className='px-3 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-lg hover:from-gray-500 hover:to-gray-600 transition-all'
                   >
-                    Cancelar
+                    <XCircle className='w-4 h-4' />
                   </button>
                 </div>
               ) : (
-                <div className='flex justify-between items-center'>
-                  {getNivelBadge(teacher.nivel)}
-                  <button
-                    onClick={() => {
-                      setEditingField('nivel')
-                      setEditValue(teacher.nivel)
-                    }}
-                    className='text-blue-600 hover:text-blue-700 ml-2'
-                  >
-                    <Edit2 className='w-4 h-4' />
-                  </button>
+                <div
+                  className='p-3 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between'
+                  onClick={() => {
+                    setEditingField('nivel')
+                    setEditValue(teacher.nivel || 'A')
+                  }}
+                >
+                  <div>{getNivelBadge(teacher.nivel)}</div>
+                  <Edit2 className='w-4 h-4 text-gray-400' />
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Puede academia */}
-            <div className='space-y-2'>
-              <label className='text-sm font-medium text-gray-700'>
-                Puede academia
+          <div className='pt-4 border-t border-gray-200'>
+            <div className='space-y-1'>
+              <label className={componentClasses.label}>
+                <Package className='w-4 h-4 inline mr-2' />
+                Puede dar Academia
               </label>
               {editingField === 'puede_academia' ? (
                 <div className='flex gap-2'>
                   <select
                     value={editValue}
-                    onChange={(e) => setEditValue(e.target.value === 'true')}
-                    className='flex-1 px-3 py-2 border rounded-md'
-                    disabled={isSaving}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className={componentClasses.input}
+                    autoFocus
                   >
                     <option value='true'>Sí</option>
                     <option value='false'>No</option>
                   </select>
                   <button
                     onClick={() =>
-                      handleInlineEdit('puede_academia', editValue)
+                      handleInlineEdit('puede_academia', editValue === 'true')
                     }
                     disabled={isSaving}
-                    className='px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
+                    className='px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50'
                   >
-                    {isSaving ? 'Guardando...' : 'Guardar'}
+                    <CheckCircle className='w-4 h-4' />
                   </button>
                   <button
-                    onClick={() => setEditingField(null)}
-                    disabled={isSaving}
-                    className='px-3 py-2 border rounded-md hover:bg-gray-50 disabled:opacity-50'
+                    onClick={() => {
+                      setEditingField(null)
+                      setEditValue('')
+                    }}
+                    className='px-3 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-lg hover:from-gray-500 hover:to-gray-600 transition-all'
                   >
-                    Cancelar
+                    <XCircle className='w-4 h-4' />
                   </button>
                 </div>
               ) : (
-                <div className='flex justify-between items-center'>
-                  {getAcademiaBadge(teacher.puede_academia)}
-                  <button
-                    onClick={() => {
-                      setEditingField('puede_academia')
-                      setEditValue(teacher.puede_academia)
-                    }}
-                    className='text-blue-600 hover:text-blue-700 ml-2'
-                  >
-                    <Edit2 className='w-4 h-4' />
-                  </button>
+                <div
+                  className='p-3 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between'
+                  onClick={() => {
+                    setEditingField('puede_academia')
+                    setEditValue(teacher.puede_academia?.toString() || 'false')
+                  }}
+                >
+                  <div>{getAcademiaBadge(teacher.puede_academia)}</div>
+                  <Edit2 className='w-4 h-4 text-gray-400' />
                 </div>
               )}
-            </div>
-
-            {/* Fecha de ingreso (solo lectura) */}
-            <div className='space-y-2'>
-              <label className='text-sm font-medium text-gray-700'>
-                Fecha de ingreso
-              </label>
-              <div className='flex items-center gap-2 text-gray-600'>
-                <Calendar className='w-4 h-4' />
-                <span>{teacher.fecha_ingreso}</span>
-              </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Botón de eliminar profesor */}
-      <div className='flex justify-end'>
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className='flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors'
-        >
-          <Trash2 className='w-4 h-4' />
-          Eliminar Profesor
-        </button>
-      </div>
     </div>
   )
 
   const PaquetesTab = () => (
     <div className='space-y-6'>
-      <div className='flex justify-between items-center'>
-        <h3 className='text-lg font-semibold text-gray-900'>
-          Paquetes Activos
-        </h3>
-      </div>
+      <Card className={componentClasses.mainCard}>
+        <CardHeader className='bg-gradient-to-r from-blue-500 to-indigo-600 text-white'>
+          <CardTitle className='text-xl flex items-center gap-2'>
+            <Package className='w-5 h-5' />
+            Paquetes Activos
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='p-6'>
+          {/* Resumen de facturación y clases */}
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
+            <Card className='bg-gradient-to-r from-green-50 to-green-100 border-green-200'>
+              <CardContent className='p-4'>
+                <div className='text-center'>
+                  <div className='text-2xl font-bold text-green-700'>
+                    $
+                    {paquetesActivos
+                      .reduce((total, paquete) => {
+                        return (
+                          total +
+                          paquete.clasesUtilizadasTotal *
+                            paquete.precioPorClaseConIVA
+                        )
+                      }, 0)
+                      .toFixed(2)}
+                  </div>
+                  <div className='text-sm text-green-600 font-medium'>
+                    Facturación Total (con IVA)
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className='bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200'>
+              <CardContent className='p-4'>
+                <div className='text-center'>
+                  <div className='text-2xl font-bold text-blue-700'>
+                    {paquetesActivos.reduce(
+                      (total, paquete) => total + paquete.clasesUtilizadasTotal,
+                      0
+                    )}
+                  </div>
+                  <div className='text-sm text-blue-600 font-medium'>
+                    Clases Dadas
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className='bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200'>
+              <CardContent className='p-4'>
+                <div className='text-center'>
+                  <div className='text-2xl font-bold text-purple-700'>
+                    {paquetesActivos.length}
+                  </div>
+                  <div className='text-sm text-purple-600 font-medium'>
+                    Paquetes
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Resumen de facturación y clases */}
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='text-center'>
-              <div className='text-2xl font-bold text-green-600'>
-                $
-                {paquetesActivos
-                  .reduce((total, paquete) => {
-                    return (
-                      total +
-                      paquete.clasesUtilizadasTotal *
-                        paquete.precioPorClaseConIVA
-                    )
-                  }, 0)
-                  .toFixed(2)}
-              </div>
-              <div className='text-sm text-gray-600'>
-                Facturación Total (con IVA)
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='text-center'>
-              <div className='text-2xl font-bold text-blue-600'>
-                {paquetesActivos.reduce(
-                  (total, paquete) => total + paquete.clasesUtilizadasTotal,
-                  0
-                )}
-              </div>
-              <div className='text-sm text-gray-600'>Clases Dadas</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='text-center'>
-              <div className='text-2xl font-bold text-purple-600'>
-                {paquetesActivos.length}
-              </div>
-              <div className='text-sm text-gray-600'>Paquetes</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardContent className='pt-6'>
+          {/* Lista de paquetes activos */}
           {paquetesActivos.length === 0 ? (
-            <div className='text-gray-500'>Sin paquetes activos</div>
+            <Card className='border-dashed border-2 border-gray-300'>
+              <CardContent className='p-8 text-center'>
+                <Package className='w-12 h-12 text-gray-400 mx-auto mb-4' />
+                <p className='text-gray-500 font-medium'>
+                  Sin paquetes activos
+                </p>
+              </CardContent>
+            </Card>
           ) : (
             <div className='space-y-4'>
               {paquetesActivos.map((paquete) => {
@@ -697,9 +715,12 @@ export function TeacherDetailsModal({
                             return (
                               <div
                                 key={index}
-                                className='text-sm text-gray-600 flex items-center justify-between'
+                                className='text-sm text-gray-600 flex items-center justify-between p-2 bg-white rounded border'
                               >
-                                <span>• {alumno.nombre}</span>
+                                <span className='flex items-center gap-2'>
+                                  <User className='w-3 h-3 text-gray-400' />
+                                  {alumno.nombre}
+                                </span>
                                 <div className='flex items-center gap-2'>
                                   {editClasesId ===
                                   inscripcion?.id_inscripcion ? (
@@ -714,7 +735,7 @@ export function TeacherDetailsModal({
                                         className='w-12 px-1 py-0.5 border rounded text-xs'
                                         disabled={savingClases}
                                       />
-                                      <span className='text-xs'>
+                                      <span className='text-xs text-gray-500'>
                                         / {paquete.clasesTotales}
                                       </span>
                                       <button
@@ -724,9 +745,13 @@ export function TeacherDetailsModal({
                                           )
                                         }
                                         disabled={savingClases}
-                                        className='text-green-600 hover:text-green-700 text-xs'
+                                        className='text-green-600 hover:text-green-700 text-xs p-1 rounded'
                                       >
-                                        {savingClases ? '...' : '✓'}
+                                        {savingClases ? (
+                                          <div className='w-3 h-3 border border-green-600 border-t-transparent rounded-full animate-spin' />
+                                        ) : (
+                                          <CheckCircle className='w-3 h-3' />
+                                        )}
                                       </button>
                                       <button
                                         onClick={() => {
@@ -734,14 +759,14 @@ export function TeacherDetailsModal({
                                           setEditClasesValue('')
                                         }}
                                         disabled={savingClases}
-                                        className='text-gray-600 hover:text-gray-700 text-xs'
+                                        className='text-gray-600 hover:text-gray-700 text-xs p-1 rounded'
                                       >
-                                        ✕
+                                        <XCircle className='w-3 h-3' />
                                       </button>
                                     </div>
                                   ) : (
                                     <div className='flex items-center gap-1'>
-                                      <span className='text-xs'>
+                                      <span className='text-xs font-medium'>
                                         {alumno.clasesUtilizadas} /{' '}
                                         {paquete.clasesTotales}
                                       </span>
@@ -754,7 +779,7 @@ export function TeacherDetailsModal({
                                             alumno.clasesUtilizadas.toString()
                                           )
                                         }}
-                                        className='text-blue-600 hover:text-blue-700 text-xs'
+                                        className='text-blue-600 hover:text-blue-700 p-1 rounded'
                                         title='Editar clases'
                                       >
                                         <Edit2 className='w-3 h-3' />
@@ -769,31 +794,34 @@ export function TeacherDetailsModal({
                       </div>
                       <div className='space-y-2 text-right'>
                         <div className='text-sm'>
-                          <span className='font-medium text-green-600'>
+                          <span className='font-bold text-green-600 text-lg'>
                             ${facturacionPaquete.toFixed(2)}
                           </span>
-                          <div className='text-xs text-gray-500'>
+                          <div className='text-xs text-green-500 font-medium'>
                             Facturación (con IVA)
                           </div>
                         </div>
                         <div className='text-sm'>
-                          <span className='font-medium text-gray-600'>
+                          <span className='font-semibold text-blue-600'>
                             {paquete.clasesUtilizadasTotal} /{' '}
                             {paquete.clasesTotales ?? 0}
                           </span>
-                          <div className='text-xs text-gray-500'>
+                          <div className='text-xs text-blue-500 font-medium'>
                             Total clases
                           </div>
                         </div>
                       </div>
                     </div>
                     {paquete.fechaVencimiento && (
-                      <div className='mt-3 pt-3 border-t border-blue-200'>
-                        <div className='text-sm text-gray-600'>
-                          <strong>Vence:</strong>{' '}
-                          {new Date(
-                            paquete.fechaVencimiento
-                          ).toLocaleDateString('es-ES')}
+                      <div className='mt-4 pt-4 border-t border-blue-200'>
+                        <div className='text-sm text-gray-600 flex items-center gap-2'>
+                          <Calendar className='w-4 h-4 text-blue-500' />
+                          <span>
+                            <strong>Vence:</strong>{' '}
+                            {new Date(
+                              paquete.fechaVencimiento
+                            ).toLocaleDateString('es-ES')}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -809,13 +837,14 @@ export function TeacherDetailsModal({
 
   const HistorialTab = () => (
     <div className='space-y-6'>
-      <Card>
-        <CardHeader>
-          <CardTitle className='text-lg flex items-center gap-2'>
-            <Award className='w-4 h-4' /> Historial de Paquetes
+      <Card className={componentClasses.mainCard}>
+        <CardHeader className='bg-gradient-to-r from-blue-500 to-indigo-600 text-white'>
+          <CardTitle className='text-xl flex items-center gap-2'>
+            <Award className='w-5 h-5' />
+            Historial de Paquetes
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className='p-6'>
           <div className='space-y-4'>
             {historialPaquetes.map((paquete) => {
               const clasesDadas = paquete.clasesUtilizadasTotal
@@ -833,55 +862,67 @@ export function TeacherDetailsModal({
                   }`}
                 >
                   <div className='flex justify-between items-start'>
-                    <div className='space-y-2 flex-1'>
-                      <div className='font-medium flex items-center gap-2 text-lg'>
+                    <div className='space-y-3 flex-1'>
+                      <div className='font-semibold text-lg flex items-center gap-3'>
                         {paquete.nombrePaquete}
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
                             paquete.estado === 'ACTIVO'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
+                              ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                              : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white'
+                          } ${designTokens.shadows.button}`}
                         >
                           {paquete.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'}
                         </span>
                       </div>
-                      <div className='text-sm text-gray-600'>
-                        <strong>Precio total del paquete:</strong> $
-                        {precioTotalPaquete.toFixed(2)}
+                      <div className='text-sm text-gray-600 flex items-center gap-2'>
+                        <Package className='w-4 h-4 text-blue-500' />
+                        <span>
+                          <strong>Precio total del paquete:</strong> $
+                          {precioTotalPaquete.toFixed(2)}
+                        </span>
                       </div>
-                      <div className='text-sm text-gray-600'>
-                        <strong>Fecha de inicio:</strong>{' '}
-                        {new Date(paquete.fechaInicio).toLocaleDateString(
-                          'es-ES'
-                        )}
+                      <div className='text-sm text-gray-600 flex items-center gap-2'>
+                        <Calendar className='w-4 h-4 text-blue-500' />
+                        <span>
+                          <strong>Fecha de inicio:</strong>{' '}
+                          {new Date(paquete.fechaInicio).toLocaleDateString(
+                            'es-ES'
+                          )}
+                        </span>
                       </div>
-                      <div className='text-sm text-gray-600'>
-                        <strong>Alumnos ({paquete.alumnos.length}):</strong>
+                      <div className='text-sm text-gray-600 flex items-center gap-2'>
+                        <User className='w-4 h-4 text-blue-500' />
+                        <span>
+                          <strong>Alumnos ({paquete.alumnos.length}):</strong>
+                        </span>
                       </div>
-                      <div className='ml-4 space-y-1'>
+                      <div className='ml-6 grid grid-cols-1 md:grid-cols-2 gap-2'>
                         {paquete.alumnos.map((alumno, index) => (
-                          <div key={index} className='text-sm text-gray-600'>
-                            • {alumno.nombre}
+                          <div
+                            key={index}
+                            className='text-sm text-gray-600 p-2 bg-gray-50 rounded border'
+                          >
+                            {alumno.nombre}
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className='space-y-2 text-right'>
+                    <div className='space-y-3 text-right'>
                       <div className='text-sm'>
-                        <span className='font-medium text-green-600'>
+                        <span className='font-bold text-green-600 text-lg'>
                           ${facturacionPaquete.toFixed(2)}
                         </span>
-                        <div className='text-xs text-gray-500'>
+                        <div className='text-xs text-green-500 font-medium'>
                           Facturación (con IVA)
                         </div>
                       </div>
                       <div className='text-sm'>
-                        <span className='font-medium text-gray-600'>
+                        <span className='font-semibold text-blue-600'>
                           {paquete.clasesUtilizadasTotal} /{' '}
                           {paquete.clasesTotales ?? 0}
                         </span>
-                        <div className='text-xs text-gray-500'>
+                        <div className='text-xs text-blue-500 font-medium'>
                           Total clases
                         </div>
                       </div>
@@ -906,120 +947,145 @@ export function TeacherDetailsModal({
     </div>
   )
 
+  if (!teacher) return null
+
   return (
-    <div
-      className='fixed inset-0 z-50 flex justify-center items-center bg-black/50'
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose()
-        }
-      }}
-    >
-      <div className='relative bg-white w-full max-w-4xl rounded-xl shadow-lg p-6 overflow-y-auto max-h-[90vh]'>
-        <button
-          className='absolute top-4 right-6 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'
-          onClick={onClose}
-          aria-label='Cerrar'
-        >
-          ×
-        </button>
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className='sm:max-w-[900px] max-h-[95vh] overflow-hidden flex flex-col'>
+          <DialogHeader className='flex-shrink-0 pb-4'>
+            <DialogTitle className='text-2xl font-bold flex items-center gap-2'>
+              <User className='w-6 h-6 text-blue-600' />
+              {teacher.nombre_completo}
+            </DialogTitle>
+          </DialogHeader>
 
-        {/* Header */}
-        <div className='mb-6'>
-          <h2 className='text-2xl font-bold flex items-center gap-2'>
-            <User className='w-5 h-5' /> {teacher.nombre_completo}
-          </h2>
-          <div className='flex items-center gap-2 mt-2'>
-            {getNivelBadge(teacher.nivel)}
-            {getAcademiaBadge(teacher.puede_academia)}
+          <div className='flex items-center justify-between mb-4'>
+            <div className='flex items-center gap-3'>
+              {getNivelBadge(teacher.nivel)}
+              {getAcademiaBadge(teacher.puede_academia)}
+            </div>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className='bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors flex items-center gap-2 font-medium shadow-lg'
+              style={{
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                outline: 'none'
+              }}
+              title='Eliminar profesor'
+            >
+              <Trash2 className='w-4 h-4' />
+              Eliminar
+            </button>
           </div>
-        </div>
 
-        {/* Tabs */}
-        <div className='flex gap-2 border-b border-gray-200 mb-6'>
-          <TabButton tab='info' icon={User} label='Información' />
-          <TabButton tab='paquetes' icon={Package} label='Paquetes Activos' />
-          <TabButton tab='historial' icon={Award} label='Historial' />
-        </div>
+          <div className='flex-1 overflow-y-auto'>
+            {/* Tabs */}
+            <div className='flex gap-2 border-b border-gray-200 mb-6'>
+              <TabButton tab='info' icon={User} label='Información' />
+              <TabButton
+                tab='paquetes'
+                icon={Package}
+                label='Paquetes Activos'
+              />
+              <TabButton tab='historial' icon={Award} label='Historial' />
+            </div>
 
-        {/* Content */}
-        {activeTab === 'info' && <InfoTab />}
-        {activeTab === 'paquetes' && <PaquetesTab />}
-        {activeTab === 'historial' && <HistorialTab />}
-
-        {/* Messages */}
-        {error && (
-          <div className='fixed bottom-4 right-4 bg-red-100 border border-red-200 text-red-700 px-4 py-2 rounded-lg shadow-lg'>
-            {error}
+            {/* Content */}
+            {activeTab === 'info' && <InfoTab />}
+            {activeTab === 'paquetes' && <PaquetesTab />}
+            {activeTab === 'historial' && <HistorialTab />}
           </div>
-        )}
-        {success && (
-          <div className='fixed bottom-4 right-4 bg-green-100 border border-green-200 text-green-700 px-4 py-2 rounded-lg shadow-lg'>
-            {success}
-          </div>
-        )}
-      </div>
+
+          {/* Messages */}
+          {error && (
+            <div
+              className={`fixed bottom-4 right-4 ${componentClasses.errorMessage} ${designTokens.shadows.elevated} z-50`}
+            >
+              <XCircle className='w-5 h-5 text-red-600 flex-shrink-0' />
+              <span className={designTokens.text.error}>{error}</span>
+            </div>
+          )}
+          {success && (
+            <div
+              className={`fixed bottom-4 right-4 ${componentClasses.successMessage} ${designTokens.shadows.elevated} z-50`}
+            >
+              <CheckCircle className='w-5 h-5 text-green-600 flex-shrink-0' />
+              <span className={designTokens.text.success}>{success}</span>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de confirmación para eliminar */}
       {showDeleteConfirm && (
-        <div className='fixed inset-0 z-60 flex justify-center items-center bg-black/50'>
-          <div className='bg-white rounded-lg p-6 max-w-md w-full mx-4'>
-            <div className='flex items-center gap-3 mb-4'>
-              <div className='flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center'>
-                <AlertTriangle className='w-6 h-6 text-red-600' />
-              </div>
-              <div>
-                <h3 className='text-lg font-semibold text-gray-900'>
-                  Confirmar eliminación
-                </h3>
-                <p className='text-sm text-gray-600'>
-                  Esta acción no se puede deshacer
-                </p>
-              </div>
-            </div>
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent className='sm:max-w-md'>
+            <DialogHeader>
+              <DialogTitle className='flex items-center gap-3'>
+                <div className='flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center'>
+                  <AlertTriangle className='w-6 h-6 text-red-600' />
+                </div>
+                <div>
+                  <div className='text-lg font-semibold text-gray-900'>
+                    Confirmar eliminación
+                  </div>
+                  <p className='text-sm text-gray-600 font-normal'>
+                    Esta acción no se puede deshacer
+                  </p>
+                </div>
+              </DialogTitle>
+            </DialogHeader>
 
-            <div className='mb-6'>
-              <p className='text-gray-700'>
+            <div className='py-4'>
+              <p className='text-gray-700 mb-4'>
                 ¿Estás seguro que deseas eliminar al profesor{' '}
-                <strong>{teacher.nombre_completo}</strong>?
+                <strong>{teacher?.nombre_completo}</strong>?
               </p>
-              <div className='mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg'>
-                <p className='text-sm text-yellow-800'>
-                  <strong>Advertencia:</strong> Al eliminar este profesor se
-                  perderá toda su información y no podrá recuperarse.
-                </p>
+              <div
+                className={`p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex gap-3`}
+              >
+                <AlertTriangle className='w-5 h-5 text-yellow-600 flex-shrink-0' />
+                <div>
+                  <p className='text-sm text-yellow-800'>
+                    <strong>Advertencia:</strong> Al eliminar este profesor se
+                    perderá toda su información y no podrá recuperarse.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className='flex gap-3 justify-end'>
+            <div className='flex gap-3 justify-end pt-4 border-t border-gray-200'>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isDeleting}
-                className='px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50'
+                className='px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 font-medium'
               >
-                Cancelar
+                <span>Cancelar</span>
               </button>
               <button
                 onClick={handleDeleteProfesor}
                 disabled={isDeleting}
-                className='px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2'
+                className='px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all disabled:opacity-50 flex items-center gap-2 font-medium border-0'
               >
                 {isDeleting ? (
                   <>
                     <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
-                    Eliminando...
+                    <span>Eliminando...</span>
                   </>
                 ) : (
                   <>
                     <Trash2 className='w-4 h-4' />
-                    Eliminar
+                    <span>Eliminar</span>
                   </>
                 )}
               </button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
-    </div>
+    </>
   )
 }

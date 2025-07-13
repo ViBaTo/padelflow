@@ -1,5 +1,6 @@
 import React from 'react'
 import { useForm } from 'react-hook-form'
+import { Button } from './ui/button'
 
 export function GenericForm({
   fields,
@@ -54,7 +55,7 @@ export function GenericForm({
                 defaultValue={
                   initialValues[field.name] !== undefined &&
                   initialValues[field.name] !== null
-                    ? initialValues[field.name]
+                    ? String(initialValues[field.name])
                     : ''
                 }
               >
@@ -63,7 +64,7 @@ export function GenericForm({
                   const value = typeof opt === 'object' ? opt.value : opt
                   const label = typeof opt === 'object' ? opt.label : opt
                   return (
-                    <option key={value} value={value}>
+                    <option key={String(value)} value={String(value)}>
                       {label}
                     </option>
                   )
@@ -123,22 +124,22 @@ export function GenericForm({
       )}
       <div className='flex gap-3 mt-4'>
         {onCancel && (
-          <button
+          <Button
             type='button'
+            variant='secondary'
             onClick={onCancel}
-            className='flex-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-2.5 rounded-lg shadow-sm transition-colors'
+            className='flex-1'
           >
             Cancelar
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type='submit'
-          className={`bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg shadow-sm transition-colors ${
-            onCancel ? 'flex-1' : 'w-full'
-          }`}
+          variant='primary'
+          className={onCancel ? 'flex-1' : 'w-full'}
         >
           {submitText}
-        </button>
+        </Button>
       </div>
     </form>
   )

@@ -2,18 +2,43 @@ import { useEffect, useState, useRef } from 'react'
 import { db, supabase } from '../../lib/supabase'
 import { GenericForm } from '../../components/GenericForm'
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardSubtitle
+} from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
+import { Alert } from '../../components/ui/Alert'
+import { Heading, Text, Muted } from '../../components/ui/Typography'
+import { componentClasses, designTokens } from '../../lib/designTokens'
+import {
   Users,
   Phone,
   Calendar,
   Plus,
   Search,
   Filter,
-  Mail
+  Mail,
+  Eye,
+  Download,
+  Upload,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  TrendingUp,
+  UserCheck,
+  UserPlus,
+  Activity
 } from 'lucide-react'
 import { StudentDetailsModal } from '../../components/StudentDetailsModal'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { getCategoryColor, getCategoryColorByType } from '../../lib/utils'
+import {
+  getCategoryColor,
+  getCategoryColorByType,
+  formatDateSafe
+} from '../../lib/utils'
 
 export default function Alumnos() {
   const [alumnos, setAlumnos] = useState([])
@@ -34,7 +59,7 @@ export default function Alumnos() {
   const [filterEstado, setFilterEstado] = useState('TODOS')
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const recordsPerPage = 10
+  const recordsPerPage = 12
   const contextMenuRef = useRef(null)
   const filterDropdownRef = useRef(null)
   const [selectedAlumno, setSelectedAlumno] = useState(null)
@@ -44,49 +69,79 @@ export default function Alumnos() {
   const [importError, setImportError] = useState(null)
   const [importSuccess, setImportSuccess] = useState(null)
 
-  const fetchAlumnos = async () => {
+  // Función unificada para cargar todos los datos
+  const fetchAllData = async () => {
     setLoading(true)
-    const { data, error } = await db.getAlumnos()
-    if (error) {
-      setError(error.message)
-      console.error('Error fetching alumnos:', error)
-    } else {
-      console.log('Alumnos data:', data)
-      setAlumnos(data)
+    try {
+      console.log('🔄 Loading all data...')
+
+      const dataPromises = [
+        db.getAlumnos(),
+        db.getCategorias(),
+        supabase.from('inscripciones').select('*'),
+        db.getPaquetes(),
+        db.getProfesores()
+      ]
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout al cargar datos')), 30000)
+      )
+
+      const results = await Promise.race([
+        Promise.all(dataPromises),
+        timeoutPromise
+      ])
+
+      const [
+        alumnosResult,
+        categoriasResult,
+        inscripcionesResult,
+        paquetesResult,
+        profesoresResult
+      ] = results
+
+      if (alumnosResult.error) throw alumnosResult.error
+      if (categoriasResult.error) throw categoriasResult.error
+      if (inscripcionesResult.error) throw inscripcionesResult.error
+      if (paquetesResult.error) throw paquetesResult.error
+      if (profesoresResult.error) throw profesoresResult.error
+
+      setAlumnos(alumnosResult.data || [])
+      setCategorias(categoriasResult.data || [])
+      setInscripciones(inscripcionesResult.data || [])
+      setPaquetes(paquetesResult.data || [])
+      setProfesores(profesoresResult.data || [])
+      setError('')
+
+      console.log('✅ All data loaded successfully')
+    } catch (err) {
+      console.error('❌ Error fetching data:', err)
+
+      if (err.message.includes('Timeout')) {
+        setError(
+          'La carga de datos está tardando más de lo esperado. Verifica tu conexión a internet o intenta recargar la página.'
+        )
+      } else {
+        setError('Error al cargar datos: ' + err.message)
+      }
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
-  const fetchCategorias = async () => {
-    const { data, error } = await db.getCategorias()
-    if (error) setError(error.message)
-    else setCategorias(data || [])
-  }
-
-  const fetchInscripciones = async () => {
-    const { data, error } = await supabase.from('inscripciones').select('*')
-    if (error) setError(error.message)
-    else setInscripciones(data || [])
-  }
-
-  const fetchPaquetes = async () => {
-    const { data, error } = await db.getPaquetes()
-    if (error) setError(error.message)
-    else setPaquetes(data || [])
-  }
-
-  const fetchProfesores = async () => {
-    const { data, error } = await db.getProfesores()
-    if (error) setError(error.message)
-    else setProfesores(data || [])
+  const fetchAlumnos = async () => {
+    try {
+      const { data, error } = await db.getAlumnos()
+      if (error) throw error
+      setAlumnos(data || [])
+    } catch (err) {
+      console.error('Error fetching alumnos:', err)
+      setError('Error al cargar alumnos: ' + err.message)
+    }
   }
 
   useEffect(() => {
-    fetchAlumnos()
-    fetchCategorias()
-    fetchInscripciones()
-    fetchPaquetes()
-    fetchProfesores()
+    fetchAllData()
   }, [])
 
   useEffect(() => {
@@ -131,6 +186,11 @@ export default function Alumnos() {
     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, cedula })
   }
 
+  const handleViewStudent = (alumno) => {
+    setSelectedAlumno(alumno)
+    setShowDetailModal(true)
+  }
+
   // Filtros y paginación
   const alumnosFiltrados = alumnos.filter((alumno) => {
     const matchNombre =
@@ -143,20 +203,22 @@ export default function Alumnos() {
       filterEstado === 'TODOS' || alumno.estado === filterEstado
     return (matchNombre || matchTelefono) && matchEstado
   })
+
   const totalPages = Math.ceil(alumnosFiltrados.length / recordsPerPage)
   const paginatedAlumnos = alumnosFiltrados.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage
   )
+
   useEffect(() => {
     setCurrentPage(1)
   }, [search, filterEstado])
 
-  // Estadísticas
+  // Estadísticas mejoradas
   const totalAlumnos = alumnos.length
   const activos = alumnos.filter((a) => a.estado === 'ACTIVO').length
+  const inactivos = alumnos.filter((a) => a.estado === 'INACTIVO').length
 
-  // Nuevos este mes y porcentaje
   const now = new Date()
   const thisMonth = now.getMonth()
   const thisYear = now.getFullYear()
@@ -165,21 +227,26 @@ export default function Alumnos() {
     const fecha = new Date(a.fecha_registro)
     return fecha.getMonth() === thisMonth && fecha.getFullYear() === thisYear
   }).length
-  const prevMonth = thisMonth === 0 ? 11 : thisMonth - 1
-  const prevYear = thisMonth === 0 ? thisYear - 1 : thisYear
-  const nuevosMesAnterior = alumnos.filter((a) => {
+
+  const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1
+  const lastMonthYear =
+    now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
+  const nuevosUltimoMes = alumnos.filter((a) => {
     if (!a.fecha_registro) return false
     const fecha = new Date(a.fecha_registro)
-    return fecha.getMonth() === prevMonth && fecha.getFullYear() === prevYear
+    return (
+      fecha.getMonth() === lastMonth && fecha.getFullYear() === lastMonthYear
+    )
   }).length
-  let porcentaje = 0
-  if (nuevosMesAnterior > 0) {
-    porcentaje = ((nuevosEsteMes - nuevosMesAnterior) / nuevosMesAnterior) * 100
-  } else if (nuevosEsteMes > 0) {
-    porcentaje = 100
-  }
 
-  // Formulario
+  const porcentaje =
+    nuevosUltimoMes === 0
+      ? nuevosEsteMes > 0
+        ? 100
+        : 0
+      : ((nuevosEsteMes - nuevosUltimoMes) / nuevosUltimoMes) * 100
+
+  // Definición de campos para el formulario
   const alumnoFields = [
     { name: 'cedula', label: 'Cédula', type: 'text', required: true },
     {
@@ -189,6 +256,7 @@ export default function Alumnos() {
       required: true
     },
     { name: 'telefono', label: 'Teléfono', type: 'text', required: true },
+    { name: 'email', label: 'Email', type: 'email' },
     {
       name: 'fecha_registro',
       label: 'Fecha registro',
@@ -199,74 +267,70 @@ export default function Alumnos() {
       name: 'estado',
       label: 'Estado',
       type: 'select',
-      options: ['ACTIVO', 'INACTIVO'],
+      options: [
+        { value: 'ACTIVO', label: 'Activo' },
+        { value: 'INACTIVO', label: 'Inactivo' }
+      ],
+      required: true
+    },
+    {
+      name: 'id_categoria',
+      label: 'Categoría',
+      type: 'select',
+      options: categorias.map((cat) => ({
+        value: cat.id_categoria,
+        label: cat.tipo
+      })),
       required: true
     }
   ]
 
-  // Badges
+  // Badges mejorados
   const getStatusBadge = (status) => (
     <span
-      className={`px-2 py-1 rounded-full text-xs font-medium ${
+      className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${
         status === 'ACTIVO'
-          ? 'bg-green-100 text-green-800'
-          : 'bg-gray-100 text-gray-800'
+          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+          : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white'
       }`}
     >
-      {status === 'ACTIVO' ? 'Activo' : 'Inactivo'}
+      {status === 'ACTIVO' ? '✅ Activo' : '⭕ Inactivo'}
     </span>
   )
 
   const getCategoryBadge = (categoriaId) => {
-    if (!categoriaId) {
+    const categoria = categorias.find((c) => c.id_categoria === categoriaId)
+    if (!categoria) {
       return (
-        <span className='px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800'>
+        <span className='px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 shadow-sm'>
           Sin categoría
         </span>
       )
     }
 
-    // Buscar la categoría por ID
-    const categoriaObj = categorias.find(
-      (cat) => cat.id_categoria === categoriaId
-    )
-    const nombre = categoriaObj ? categoriaObj.categoria : categoriaId
-
-    // Usar función inteligente para generar colores basados en el tipo de categoría
-    const colorClass = getCategoryColorByType(nombre)
-
+    const color = getCategoryColorByType(categoria.tipo)
     return (
       <span
-        className={`px-2 py-1 rounded-md text-xs font-medium ${colorClass}`}
+        className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${color.bg} ${color.text} flex items-center gap-1`}
       >
-        {nombre}
+        <span>{color.icon}</span>
+        {categoria.tipo}
       </span>
     )
   }
 
-  // Función para obtener los paquetes de un alumno
   const getAlumnoPaquetes = (cedula) => {
-    // Obtener las inscripciones activas del alumno
-    const inscripcionesAlumno = inscripciones.filter(
-      (insc) => insc.cedula_alumno === cedula && insc.estado === 'ACTIVO'
-    )
-
-    // Obtener los nombres de los paquetes
-    const paquetesAlumno = inscripcionesAlumno.map((insc) => {
-      const paquete = paquetes.find((p) => p.codigo === insc.codigo_paquete)
-      return paquete ? paquete.nombre : insc.codigo_paquete
-    })
-
-    return paquetesAlumno
+    return inscripciones
+      .filter((i) => i.cedula_alumno === cedula)
+      .map((i) => paquetes.find((p) => p.codigo === i.codigo_paquete))
+      .filter(Boolean)
   }
 
-  // Función para mostrar los paquetes como badges
   const getPaquetesBadges = (cedula) => {
-    const paquetesAlumno = getAlumnoPaquetes(cedula)
-
-    if (paquetesAlumno.length === 0) {
+    const alumnosPaquetes = getAlumnoPaquetes(cedula)
+    if (alumnosPaquetes.length === 0) {
       return (
-        <span className='px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800'>
+        <span className='px-2 py-1 rounded-lg text-xs text-gray-500 bg-gray-100'>
           Sin paquetes
         </span>
       )
@@ -274,540 +338,656 @@ export default function Alumnos() {
 
     return (
       <div className='flex flex-wrap gap-1'>
-        {paquetesAlumno.map((paquete, index) => (
+        {alumnosPaquetes.slice(0, 2).map((paquete, index) => (
           <span
             key={index}
-            className='px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800'
+            className='px-2 py-1 rounded-lg text-xs font-medium bg-blue-100 text-blue-700'
           >
-            {paquete}
+            {paquete.nombre}
           </span>
         ))}
+        {alumnosPaquetes.length > 2 && (
+          <span className='px-2 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-600'>
+            +{alumnosPaquetes.length - 2}
+          </span>
+        )}
       </div>
     )
   }
 
-  // Importar alumnos desde archivo
+  // Funciones de importación (mantenidas del código original)
   const handleImportFile = (e) => {
-    setImportError(null)
-    setImportSuccess(null)
     const file = e.target.files[0]
     if (!file) return
+
+    setImportError(null)
+    setImportSuccess(null)
     setImportLoading(true)
-    const ext = file.name.split('.').pop().toLowerCase()
-    if (ext === 'csv') {
+
+    const fileExtension = file.name.split('.').pop().toLowerCase()
+
+    if (fileExtension === 'csv') {
       Papa.parse(file, {
         header: true,
-        skipEmptyLines: true,
-        complete: (results) => processRows(results.data, results.meta.fields),
-        error: (err) => {
-          setImportError('Error al leer el archivo: ' + err.message)
+        complete: (results) => {
+          processRows(results.data, alumnoFields)
+        },
+        error: (error) => {
+          setImportError('Error al leer el archivo CSV: ' + error.message)
           setImportLoading(false)
         }
       })
-    } else if (ext === 'xlsx') {
+    } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
       const reader = new FileReader()
-      reader.onload = (evt) => {
-        const data = new Uint8Array(evt.target.result)
-        const workbook = XLSX.read(data, { type: 'array' })
-        const sheet = workbook.Sheets[workbook.SheetNames[0]]
-        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-        const fields = Object.keys(rows[0] || {})
-        processRows(rows, fields)
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result)
+          const workbook = XLSX.read(data, { type: 'array' })
+          const sheetName = workbook.SheetNames[0]
+          const worksheet = workbook.Sheets[sheetName]
+          const jsonData = XLSX.utils.sheet_to_json(worksheet)
+          processRows(jsonData, alumnoFields)
+        } catch (error) {
+          setImportError('Error al leer el archivo Excel: ' + error.message)
+          setImportLoading(false)
+        }
       }
       reader.readAsArrayBuffer(file)
     } else {
-      setImportError('Formato no soportado. Sube un archivo .csv o .xlsx')
+      setImportError('Formato de archivo no soportado. Use CSV o Excel.')
       setImportLoading(false)
     }
   }
 
-  // Procesar filas y subir a Supabase
   const processRows = async (rows, fields) => {
-    const required = [
-      'cedula',
-      'nombre_completo',
-      'telefono',
-      'fecha_registro',
-      'estado'
-    ]
-    const missing = required.filter((f) => !fields.includes(f))
-    if (missing.length > 0) {
-      setImportError('Faltan columnas: ' + missing.join(', '))
-      setImportLoading(false)
-      return
-    }
     try {
-      let errors = []
-      for (const alumno of rows) {
-        const { error } = await db.addAlumno(alumno)
-        if (error) errors.push(`${alumno.cedula}: ${error.message}`)
+      let successCount = 0
+      let errorCount = 0
+      const errors = []
+
+      for (const [index, row] of rows.entries()) {
+        if (!row.cedula || !row.nombre_completo) continue
+
+        try {
+          const alumnoData = {
+            cedula: row.cedula?.toString().trim(),
+            nombre_completo: row.nombre_completo?.toString().trim(),
+            telefono: row.telefono?.toString().trim() || '',
+            email: row.email?.toString().trim() || '',
+            fecha_registro: row.fecha_registro || formatDateSafe(new Date()),
+            estado:
+              row.estado?.toString().toUpperCase() === 'ACTIVO'
+                ? 'ACTIVO'
+                : 'INACTIVO',
+            id_categoria: row.id_categoria || null
+          }
+
+          const { error } = await db.addAlumno(alumnoData)
+
+          if (error) {
+            errorCount++
+            errors.push(`Fila ${index + 2}: ${error.message}`)
+          } else {
+            successCount++
+          }
+        } catch (err) {
+          errorCount++
+          errors.push(`Fila ${index + 2}: ${err.message}`)
+        }
       }
-      if (errors.length > 0) {
-        setImportError('Errores al importar:\n' + errors.join('\n'))
-      } else {
-        setImportSuccess('Importación exitosa')
+
+      if (successCount > 0) {
+        setImportSuccess(`✅ ${successCount} alumnos importados exitosamente`)
         fetchAlumnos()
-        setShowImportModal(false)
       }
-    } catch (err) {
-      setImportError('Error inesperado: ' + err.message)
+
+      if (errorCount > 0) {
+        setImportError(
+          `❌ ${errorCount} errores encontrados:\n${errors
+            .slice(0, 5)
+            .join('\n')}${errors.length > 5 ? '\n...' : ''}`
+        )
+      }
+    } catch (error) {
+      setImportError('Error durante la importación: ' + error.message)
     } finally {
       setImportLoading(false)
+      setTimeout(() => {
+        setImportError(null)
+        setImportSuccess(null)
+      }, 10000)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className={componentClasses.pageContainer}>
+        <div className='flex items-center justify-center min-h-screen'>
+          <div className='text-center'>
+            <div className={componentClasses.spinner}></div>
+            <Text className='mt-4'>Cargando estudiantes...</Text>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className='flex flex-col flex-1 min-h-screen p-6 bg-gray-50'>
-      {/* Header e indicadores */}
-      <div>
+    <div className={componentClasses.pageContainer}>
+      <div className='p-3 lg:p-4 max-w-7xl mx-auto space-y-4'>
+        {/* Error state */}
+        {error && (
+          <Alert variant='error'>
+            <div>
+              <Heading level={4}>Error al cargar datos</Heading>
+              <Text className='mt-1'>{error}</Text>
+              <Button
+                variant='secondary'
+                size='sm'
+                onClick={fetchAllData}
+                className='mt-2'
+              >
+                Reintentar
+              </Button>
+            </div>
+          </Alert>
+        )}
+
         {/* Header */}
-        <div className='flex justify-between items-center'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
           <div>
-            <h1 className='text-3xl font-bold text-gray-900'>Estudiantes</h1>
-            <p className='text-gray-600 mt-1'>
-              Gestiona los estudiantes del club de pádel
-            </p>
+            <Heading level={1} className='mb-1'>
+              Gestión de Estudiantes
+            </Heading>
+            <Text variant='lead' className={designTokens.text.secondary}>
+              Administra los estudiantes de tu club de pádel
+            </Text>
           </div>
           <div className='flex gap-2'>
-            <button
-              className='bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold shadow flex items-center text-sm'
-              onClick={() => setShowModal(true)}
-            >
-              <Plus className='w-4 h-4 mr-2' />
-              Nuevo Estudiante
-            </button>
-            <button
-              className='hidden md:flex bg-gray-100 hover:bg-gray-200 text-blue-700 px-5 py-2 rounded-lg font-semibold shadow items-center text-sm border border-gray-300'
+            <Button
+              variant='secondary'
+              size='sm'
               onClick={() => setShowImportModal(true)}
             >
+              <Upload className='w-4 h-4 mr-2' />
               Importar CSV
-            </button>
+            </Button>
+            <Button variant='secondary' size='sm'>
+              <Download className='w-4 h-4 mr-2' />
+              Exportar
+            </Button>
+            <Button size='sm' onClick={() => setShowModal(true)}>
+              <Plus className='w-4 h-4 mr-2' />
+              Nuevo Estudiante
+            </Button>
           </div>
         </div>
-        {/* Stats Cards */}
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 my-6'>
-          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm font-medium text-gray-600'>
-                Total Estudiantes
-              </span>
-              <Users className='h-4 w-4 text-blue-600' />
-            </div>
-            <div className='text-2xl font-bold text-gray-900'>
-              {totalAlumnos}
-            </div>
-            <p className='text-xs text-gray-500 mt-1'>Registrados en el club</p>
-          </div>
-          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm font-medium text-gray-600'>
-                Estudiantes Activos
-              </span>
-              <Users className='h-4 w-4 text-green-600' />
-            </div>
-            <div className='text-2xl font-bold text-gray-900'>{activos}</div>
-            <p className='text-xs text-gray-500 mt-1'>Participando en clases</p>
-          </div>
-          <div className='bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-1'>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm font-medium text-gray-600'>
-                Nuevos Este Mes
-              </span>
-              <Calendar className='h-4 w-4 text-blue-600' />
-            </div>
-            <div className='text-2xl font-bold text-gray-900'>
-              {nuevosEsteMes}
-            </div>
-            <div
-              className={`text-xs mt-1 ${
-                porcentaje >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}
-            >
-              {porcentaje >= 0 ? '+' : ''}
-              {porcentaje.toFixed(0)}% vs mes anterior
-            </div>
-          </div>
+
+        {/* Métricas de estudiantes */}
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+          {/* Total Estudiantes */}
+          <Card className='group hover:shadow-2xl transition-all duration-300'>
+            <CardContent className='p-4'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <Text variant='caption' className={designTokens.text.muted}>
+                    Total Estudiantes
+                  </Text>
+                  <Heading level={2} className='mt-1 mb-1'>
+                    {totalAlumnos}
+                  </Heading>
+                  <div className='flex items-center text-sm'>
+                    <Users className='w-4 h-4 text-blue-500 mr-1' />
+                    <span className={designTokens.text.info}>
+                      Registrados en el club
+                    </span>
+                  </div>
+                </div>
+                <div className='bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-xl'>
+                  <Users className='w-5 h-5 text-white' />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Estudiantes Activos */}
+          <Card className='group hover:shadow-2xl transition-all duration-300'>
+            <CardContent className='p-4'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <Text variant='caption' className={designTokens.text.muted}>
+                    Estudiantes Activos
+                  </Text>
+                  <Heading level={2} className='mt-1 mb-1'>
+                    {activos}
+                  </Heading>
+                  <div className='flex items-center text-sm'>
+                    <UserCheck className='w-4 h-4 text-green-500 mr-1' />
+                    <span className={designTokens.text.success}>
+                      {Math.round((activos / totalAlumnos) * 100) || 0}% del
+                      total
+                    </span>
+                  </div>
+                </div>
+                <div className='bg-gradient-to-br from-green-500 to-emerald-600 p-2 rounded-xl'>
+                  <UserCheck className='w-5 h-5 text-white' />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Nuevos Este Mes */}
+          <Card className='group hover:shadow-2xl transition-all duration-300'>
+            <CardContent className='p-4'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <Text variant='caption' className={designTokens.text.muted}>
+                    Nuevos Este Mes
+                  </Text>
+                  <Heading level={2} className='mt-1 mb-1'>
+                    {nuevosEsteMes}
+                  </Heading>
+                  <div className='flex items-center text-sm'>
+                    <TrendingUp className='w-4 h-4 text-blue-500 mr-1' />
+                    <span
+                      className={
+                        porcentaje >= 0
+                          ? designTokens.text.success
+                          : designTokens.text.error
+                      }
+                    >
+                      {porcentaje >= 0 ? '+' : ''}
+                      {porcentaje.toFixed(0)}% vs mes anterior
+                    </span>
+                  </div>
+                </div>
+                <div className='bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-xl'>
+                  <UserPlus className='w-5 h-5 text-white' />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tasa de Participación */}
+          <Card className='group hover:shadow-2xl transition-all duration-300'>
+            <CardContent className='p-4'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <Text variant='caption' className={designTokens.text.muted}>
+                    Tasa de Participación
+                  </Text>
+                  <Heading level={2} className='mt-1 mb-1'>
+                    {Math.round((activos / totalAlumnos) * 100) || 0}%
+                  </Heading>
+                  <div className='flex items-center text-sm'>
+                    <Activity className='w-4 h-4 text-orange-500 mr-1' />
+                    <span className={designTokens.text.warning}>
+                      Estudiantes activos
+                    </span>
+                  </div>
+                </div>
+                <div className='bg-gradient-to-br from-orange-500 to-red-600 p-2 rounded-xl'>
+                  <Activity className='w-5 h-5 text-white' />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
         {/* Filtros y búsqueda */}
-        <div className='bg-white rounded-xl border border-gray-200 p-6 mt-4'>
-          <div className='flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-4'>
-            <h2 className='text-lg font-semibold text-gray-900'>
-              Lista de Estudiantes
-            </h2>
-            <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto justify-end ml-auto'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
-                <input
-                  type='text'
-                  placeholder='Buscar estudiantes...'
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className='pl-10 border border-gray-200 rounded-lg py-2 w-full sm:w-64 text-sm focus:ring-2 focus:ring-blue-100 focus:outline-none'
+        <Card>
+          <CardHeader>
+            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+              <div>
+                <CardTitle>Lista de Estudiantes</CardTitle>
+                <CardSubtitle>
+                  {alumnosFiltrados.length} estudiantes encontrados
+                </CardSubtitle>
+              </div>
+              <div className='flex flex-col sm:flex-row gap-3'>
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
+                  <input
+                    type='text'
+                    placeholder='Buscar estudiantes...'
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className='pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg w-full sm:w-64 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white'
+                  />
+                </div>
+                <div className='relative' ref={filterDropdownRef}>
+                  <Button
+                    variant='secondary'
+                    size='sm'
+                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  >
+                    <Filter className='w-4 h-4 mr-2' />
+                    Filtros
+                  </Button>
+                  {showFilterDropdown && (
+                    <div className='absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-10 p-4'>
+                      <label className='block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300'>
+                        Estado
+                      </label>
+                      <select
+                        value={filterEstado}
+                        onChange={(e) => setFilterEstado(e.target.value)}
+                        className='w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white'
+                      >
+                        <option value='TODOS'>Todos los estados</option>
+                        <option value='ACTIVO'>Activos</option>
+                        <option value='INACTIVO'>Inactivos</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Grid de estudiantes */}
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+          {paginatedAlumnos.map((alumno) => (
+            <Card
+              key={alumno.cedula}
+              className='group hover:shadow-2xl transition-all duration-300 cursor-pointer'
+              onContextMenu={(e) => handleContextMenu(e, alumno.cedula)}
+            >
+              <CardContent className='p-6'>
+                <div className='flex items-start justify-between mb-4'>
+                  <div className='bg-gradient-to-br from-blue-500 to-indigo-600 p-3 rounded-2xl'>
+                    <Users className='w-6 h-6 text-white' />
+                  </div>
+                  <Button
+                    variant='secondary'
+                    size='sm'
+                    onClick={() => handleViewStudent(alumno)}
+                    className='opacity-0 group-hover:opacity-100 transition-opacity'
+                  >
+                    <Eye className='w-4 h-4' />
+                  </Button>
+                </div>
+
+                <div className='space-y-3'>
+                  <div>
+                    <Heading level={4} className='mb-1 truncate'>
+                      {alumno.nombre_completo}
+                    </Heading>
+                    <Text variant='caption' className={designTokens.text.muted}>
+                      ID: {alumno.cedula}
+                    </Text>
+                  </div>
+
+                  <div className='flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400'>
+                    <Phone className='w-4 h-4' />
+                    <span>{alumno.telefono}</span>
+                  </div>
+
+                  {alumno.email && (
+                    <div className='flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400'>
+                      <Mail className='w-4 h-4' />
+                      <span className='truncate'>{alumno.email}</span>
+                    </div>
+                  )}
+
+                  <div className='flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400'>
+                    <Calendar className='w-4 h-4' />
+                    <span>Desde {alumno.fecha_registro}</span>
+                  </div>
+
+                  <div className='flex flex-wrap gap-2'>
+                    {getStatusBadge(alumno.estado)}
+                    {getCategoryBadge(alumno.id_categoria)}
+                  </div>
+
+                  <div className='pt-2 border-t border-gray-100 dark:border-gray-700'>
+                    <Text
+                      variant='small'
+                      className={designTokens.text.muted + ' mb-2'}
+                    >
+                      Paquetes:
+                    </Text>
+                    {getPaquetesBadges(alumno.cedula)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <Card>
+            <CardContent className='p-4'>
+              <div className='flex items-center justify-between'>
+                <Text variant='small' className={designTokens.text.muted}>
+                  Mostrando {(currentPage - 1) * recordsPerPage + 1} a{' '}
+                  {Math.min(
+                    currentPage * recordsPerPage,
+                    alumnosFiltrados.length
+                  )}{' '}
+                  de {alumnosFiltrados.length} estudiantes
+                </Text>
+                <div className='flex items-center gap-2'>
+                  <Button
+                    variant='secondary'
+                    size='sm'
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className='w-4 h-4' />
+                    Anterior
+                  </Button>
+                  <Text variant='small' className='px-4'>
+                    Página {currentPage} de {totalPages}
+                  </Text>
+                  <Button
+                    variant='secondary'
+                    size='sm'
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Siguiente
+                    <ChevronRight className='w-4 h-4' />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Modal para añadir estudiante */}
+        {showModal && (
+          <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm'>
+            <div className='relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-hidden'>
+              <div className='flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700'>
+                <Heading level={3}>Nuevo Estudiante</Heading>
+                <Button
+                  variant='secondary'
+                  size='sm'
+                  onClick={() => setShowModal(false)}
+                >
+                  <X className='w-4 h-4' />
+                </Button>
+              </div>
+              <div className='p-6 overflow-y-auto max-h-[calc(90vh-120px)]'>
+                <GenericForm
+                  fields={alumnoFields}
+                  initialValues={{}}
+                  onSubmit={handleAdd}
+                  submitText='Añadir estudiante'
                 />
               </div>
-              <div className='relative' ref={filterDropdownRef}>
-                <button
-                  className='flex items-center border border-gray-200 px-4 py-2 rounded-lg text-gray-700 bg-white text-sm font-medium hover:bg-gray-50 transition'
-                  onClick={() => setShowFilterDropdown((v) => !v)}
-                  type='button'
+            </div>
+          </div>
+        )}
+
+        {/* Modal de importación modernizado */}
+        {showImportModal && (
+          <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm'>
+            <div className='relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden'>
+              <div className='flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700'>
+                <div>
+                  <Heading level={3}>Importar Estudiantes</Heading>
+                  <Text variant='caption' className={designTokens.text.muted}>
+                    Sube un archivo CSV o Excel con la lista de estudiantes
+                  </Text>
+                </div>
+                <Button
+                  variant='secondary'
+                  size='sm'
+                  onClick={() => setShowImportModal(false)}
                 >
-                  <Filter className='w-4 h-4 mr-2' />
-                  Filtros
-                </button>
-                {showFilterDropdown && (
-                  <div className='absolute right-0 mt-2 w-40 bg-white border rounded-xl shadow z-10 p-3'>
-                    <label className='block text-xs font-semibold mb-1 text-gray-700'>
-                      Estado
-                    </label>
-                    <select
-                      value={filterEstado}
-                      onChange={(e) => setFilterEstado(e.target.value)}
-                      className='w-full border border-gray-200 p-2 rounded-lg text-sm'
+                  <X className='w-4 h-4' />
+                </Button>
+              </div>
+
+              <div className='p-6 overflow-y-auto max-h-[calc(90vh-120px)] space-y-6'>
+                {/* Plantillas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className='text-lg'>
+                      📋 Plantillas Disponibles
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className='flex gap-3'>
+                    <a
+                      href='/alumnos_template.csv'
+                      download='alumnos_template.csv'
+                      className='flex-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-center'
                     >
-                      <option value='TODOS'>Todos</option>
-                      <option value='ACTIVO'>Activo</option>
-                      <option value='INACTIVO'>Inactivo</option>
-                    </select>
-                  </div>
+                      📄 Plantilla Básica
+                    </a>
+                    <a
+                      href='/alumnos_demo.csv'
+                      download='alumnos_demo.csv'
+                      className='flex-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-center'
+                    >
+                      🎯 Datos de Demo
+                    </a>
+                  </CardContent>
+                </Card>
+
+                {/* Campos requeridos */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className='text-lg'>
+                      📝 Campos Requeridos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className='grid grid-cols-2 gap-3'>
+                      {[
+                        'cedula',
+                        'nombre_completo',
+                        'telefono',
+                        'fecha_registro',
+                        'estado'
+                      ].map((field) => (
+                        <div key={field} className='flex items-center'>
+                          <span className='w-2 h-2 bg-blue-500 rounded-full mr-2'></span>
+                          <span className='text-sm text-gray-700 dark:text-gray-300'>
+                            {field}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Upload area */}
+                <Card>
+                  <CardContent className='p-6'>
+                    <div className='border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-blue-400 transition-colors'>
+                      <input
+                        type='file'
+                        accept='.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'
+                        onChange={handleImportFile}
+                        className='hidden'
+                        id='file-upload'
+                        disabled={importLoading}
+                      />
+                      <label htmlFor='file-upload' className='cursor-pointer'>
+                        <div className='space-y-3'>
+                          <Upload className='mx-auto h-12 w-12 text-gray-400' />
+                          <div className='text-gray-600 dark:text-gray-400'>
+                            <span className='font-medium text-blue-600 hover:text-blue-500'>
+                              Haz clic para subir
+                            </span>
+                            <span className='text-gray-500'>
+                              {' '}
+                              o arrastra y suelta
+                            </span>
+                          </div>
+                          <Text
+                            variant='small'
+                            className={designTokens.text.muted}
+                          >
+                            CSV, XLSX hasta 10MB
+                          </Text>
+                        </div>
+                      </label>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Estados de importación */}
+                {importLoading && (
+                  <Alert variant='info'>
+                    <div className='flex items-center'>
+                      <div className={componentClasses.spinner + ' mr-3'}></div>
+                      <Text>Importando estudiantes...</Text>
+                    </div>
+                  </Alert>
+                )}
+
+                {importError && (
+                  <Alert variant='error'>
+                    <Text className='whitespace-pre-line'>{importError}</Text>
+                  </Alert>
+                )}
+
+                {importSuccess && (
+                  <Alert variant='success'>
+                    <Text>{importSuccess}</Text>
+                  </Alert>
                 )}
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      {/* Listado con scroll */}
-      <div className='flex-1 overflow-y-auto mt-4'>
-        {/* Tabla de estudiantes */}
-        <div className='overflow-x-auto'>
-          <table className='min-w-full bg-white rounded-xl border border-gray-200'>
-            <thead>
-              <tr className='bg-gray-50'>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Nombre
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Contacto
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Categoría
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Estado
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Paquetes
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-semibold text-gray-500'>
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className='divide-y divide-gray-100'>
-              {paginatedAlumnos.map((alumno) => (
-                <tr
-                  key={alumno.cedula}
-                  className='hover:bg-gray-50 transition'
-                  onContextMenu={(e) => handleContextMenu(e, alumno.cedula)}
-                >
-                  <td className='px-6 py-4'>
-                    <div className='font-medium text-gray-900 text-sm'>
-                      {alumno.nombre_completo}
-                    </div>
-                  </td>
-                  <td className='px-6 py-4'>
-                    <div className='space-y-1'>
-                      <div className='flex items-center text-sm text-gray-600'>
-                        <Phone className='w-3 h-3 mr-1' />
-                        {alumno.telefono}
-                      </div>
-                    </div>
-                  </td>
-                  <td className='px-6 py-4'>
-                    {getCategoryBadge(alumno.categoria_id)}
-                  </td>
-                  <td className='px-6 py-4'>{getStatusBadge(alumno.estado)}</td>
-                  <td className='px-6 py-4'>
-                    {getPaquetesBadges(alumno.cedula)}
-                  </td>
-                  <td className='px-6 py-4'>
-                    <div className='flex space-x-2'>
-                      <button
-                        className='border border-gray-200 rounded px-3 py-1 text-xs font-medium hover:bg-gray-100 transition'
-                        onClick={() => {
-                          setSelectedAlumno(alumno)
-                          setShowDetailModal(true)
-                        }}
-                      >
-                        Ver
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {/* Paginación */}
-        {totalPages > 1 && (
-          <div className='flex gap-2 mt-4 items-center justify-end'>
-            <button
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
-            >
-              Anterior
-            </button>
-            <span className='text-xs text-gray-500'>
-              Página {currentPage} de {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className='px-3 py-1 rounded border border-gray-200 bg-white text-gray-700 text-xs font-medium disabled:opacity-50'
-            >
-              Siguiente
-            </button>
-          </div>
         )}
+
         {/* Menú contextual */}
         {contextMenu.visible && (
-          <ul
+          <div
             ref={contextMenuRef}
-            className='absolute z-50 bg-white border rounded shadow-md py-1 text-sm'
-            style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
+            className='absolute z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 min-w-[120px]'
+            style={{ top: contextMenu.y, left: contextMenu.x }}
           >
-            <li>
-              <button
-                onClick={() => handleDelete(contextMenu.cedula)}
-                className='w-full text-left px-4 py-2 hover:bg-red-100 hover:text-red-600'
-              >
-                Eliminar
-              </button>
-            </li>
-          </ul>
+            <button
+              onClick={() => handleDelete(contextMenu.cedula)}
+              className='w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors'
+            >
+              Eliminar
+            </button>
+          </div>
         )}
+
+        {/* Modal de detalles del estudiante */}
+        <StudentDetailsModal
+          open={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          student={selectedAlumno}
+          paquetes={paquetes}
+          inscripciones={inscripciones}
+          categorias={categorias}
+          profesores={profesores}
+          onDataChange={() => {
+            fetchAllData()
+          }}
+        />
       </div>
-      {/* Modal para añadir estudiante */}
-      {showModal && (
-        <div className='fixed inset-0 z-50 flex justify-end bg-black/50 transition-opacity duration-300'>
-          <div className='relative bg-white h-full w-full max-w-lg border-l border-gray-200 px-8 py-8 overflow-y-auto animate-fade-in-right'>
-            <button
-              className='absolute top-4 right-6 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'
-              onClick={() => setShowModal(false)}
-              aria-label='Cerrar'
-            >
-              ×
-            </button>
-            <GenericForm
-              fields={alumnoFields}
-              initialValues={{}}
-              onSubmit={handleAdd}
-              submitText='Añadir estudiante'
-            />
-          </div>
-        </div>
-      )}
-      {/* Modal de detalle de alumno */}
-      <StudentDetailsModal
-        open={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        student={selectedAlumno}
-        paquetes={paquetes}
-        inscripciones={inscripciones}
-        categorias={categorias}
-        profesores={profesores}
-        onDataChange={() => {
-          fetchAlumnos()
-          fetchInscripciones()
-          fetchPaquetes()
-        }}
-      />
-      {/* Modal de importación de alumnos */}
-      {showImportModal && (
-        <div className='fixed inset-0 z-50 flex justify-center items-center bg-black/40'>
-          <div className='bg-white rounded-xl p-8 shadow-xl relative w-full max-w-lg'>
-            <button
-              className='absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'
-              onClick={() => setShowImportModal(false)}
-              aria-label='Cerrar'
-            >
-              ×
-            </button>
-            <div className='text-center mb-6'>
-              <div className='w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4'>
-                <svg
-                  className='w-8 h-8 text-blue-600'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12'
-                  />
-                </svg>
-              </div>
-              <h2 className='text-2xl font-bold text-gray-900 mb-2'>
-                Importar Alumnos
-              </h2>
-              <p className='text-gray-600'>
-                Sube un archivo CSV o Excel con la lista de estudiantes
-              </p>
-            </div>
-
-            <div className='space-y-4'>
-              {/* Plantillas */}
-              <div className='bg-gray-50 rounded-lg p-4'>
-                <h3 className='font-semibold text-gray-900 mb-3'>
-                  📋 Plantillas Disponibles
-                </h3>
-                <div className='flex gap-2'>
-                  <a
-                    href='/alumnos_template.csv'
-                    download='alumnos_template.csv'
-                    className='flex-1 bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors'
-                  >
-                    📄 Plantilla Básica
-                  </a>
-                  <a
-                    href='/alumnos_demo.csv'
-                    download='alumnos_demo.csv'
-                    className='flex-1 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors'
-                  >
-                    🎯 Datos de Demo
-                  </a>
-                </div>
-              </div>
-
-              {/* Campos requeridos */}
-              <div className='bg-blue-50 rounded-lg p-4'>
-                <h3 className='font-semibold text-blue-900 mb-2'>
-                  📝 Campos Requeridos
-                </h3>
-                <div className='grid grid-cols-2 gap-2 text-sm'>
-                  <div className='flex items-center'>
-                    <span className='w-2 h-2 bg-blue-500 rounded-full mr-2'></span>
-                    <span className='text-blue-800'>cedula</span>
-                  </div>
-                  <div className='flex items-center'>
-                    <span className='w-2 h-2 bg-blue-500 rounded-full mr-2'></span>
-                    <span className='text-blue-800'>nombre_completo</span>
-                  </div>
-                  <div className='flex items-center'>
-                    <span className='w-2 h-2 bg-blue-500 rounded-full mr-2'></span>
-                    <span className='text-blue-800'>telefono</span>
-                  </div>
-                  <div className='flex items-center'>
-                    <span className='w-2 h-2 bg-blue-500 rounded-full mr-2'></span>
-                    <span className='text-blue-800'>fecha_registro</span>
-                  </div>
-                  <div className='flex items-center'>
-                    <span className='w-2 h-2 bg-blue-500 rounded-full mr-2'></span>
-                    <span className='text-blue-800'>estado</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Upload */}
-              <div className='border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors'>
-                <input
-                  type='file'
-                  accept='.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'
-                  onChange={handleImportFile}
-                  className='hidden'
-                  id='file-upload'
-                  disabled={importLoading}
-                />
-                <label htmlFor='file-upload' className='cursor-pointer'>
-                  <div className='space-y-2'>
-                    <svg
-                      className='mx-auto h-12 w-12 text-gray-400'
-                      stroke='currentColor'
-                      fill='none'
-                      viewBox='0 0 48 48'
-                    >
-                      <path
-                        d='M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02'
-                        strokeWidth={2}
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                      />
-                    </svg>
-                    <div className='text-gray-600'>
-                      <span className='font-medium text-blue-600 hover:text-blue-500'>
-                        Haz clic para subir
-                      </span>
-                      <span className='text-gray-500'>
-                        {' '}
-                        o arrastra y suelta
-                      </span>
-                    </div>
-                    <p className='text-xs text-gray-500'>
-                      CSV, XLSX hasta 10MB
-                    </p>
-                  </div>
-                </label>
-              </div>
-
-              {/* Estados */}
-              {importLoading && (
-                <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
-                  <div className='flex items-center'>
-                    <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3'></div>
-                    <span className='text-blue-800 font-medium'>
-                      Importando alumnos...
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {importError && (
-                <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
-                  <div className='flex items-start'>
-                    <svg
-                      className='w-5 h-5 text-red-400 mr-2 mt-0.5'
-                      fill='currentColor'
-                      viewBox='0 0 20 20'
-                    >
-                      <path
-                        fillRule='evenodd'
-                        d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z'
-                        clipRule='evenodd'
-                      />
-                    </svg>
-                    <div className='text-red-800 text-sm whitespace-pre-line'>
-                      {importError}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {importSuccess && (
-                <div className='bg-green-50 border border-green-200 rounded-lg p-4'>
-                  <div className='flex items-start'>
-                    <svg
-                      className='w-5 h-5 text-green-400 mr-2 mt-0.5'
-                      fill='currentColor'
-                      viewBox='0 0 20 20'
-                    >
-                      <path
-                        fillRule='evenodd'
-                        d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z'
-                        clipRule='evenodd'
-                      />
-                    </svg>
-                    <div className='text-green-800 font-medium'>
-                      {importSuccess}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

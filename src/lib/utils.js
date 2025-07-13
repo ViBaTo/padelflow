@@ -252,3 +252,94 @@ export const exportAllTablesAsCSV = async (db, supabase) => {
 
   return exportedFiles
 }
+
+// 🔧 Funciones de formateo de fechas seguras (sin problemas de zona horaria)
+
+/**
+ * Formatea una fecha a string YYYY-MM-DD de manera segura sin problemas de zona horaria
+ * @param {Date} date - La fecha a formatear
+ * @returns {string} - Fecha en formato YYYY-MM-DD
+ */
+export const formatDateSafe = (date) => {
+  if (!date || !(date instanceof Date)) {
+    console.warn('formatDateSafe: fecha inválida recibida:', date)
+    return null
+  }
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Formatea una fecha a string YYYY-MM-DD HH:MM:SS de manera segura
+ * @param {Date} date - La fecha a formatear
+ * @returns {string} - Fecha en formato YYYY-MM-DD HH:MM:SS
+ */
+export const formatDateTimeSafe = (date) => {
+  if (!date || !(date instanceof Date)) {
+    console.warn('formatDateTimeSafe: fecha inválida recibida:', date)
+    return null
+  }
+
+  const datePart = formatDateSafe(date)
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+
+  return `${datePart} ${hours}:${minutes}:${seconds}`
+}
+
+/**
+ * Convierte un string de fecha YYYY-MM-DD a objeto Date local
+ * @param {string} dateString - String en formato YYYY-MM-DD
+ * @returns {Date} - Objeto Date local
+ */
+export const parseeDateStringToLocal = (dateString) => {
+  if (!dateString || typeof dateString !== 'string') {
+    console.warn(
+      'parseeDateStringToLocal: string de fecha inválido:',
+      dateString
+    )
+    return null
+  }
+
+  // Dividir la fecha en partes para evitar problemas de zona horaria
+  const [year, month, day] = dateString.split('-').map(Number)
+
+  if (!year || !month || !day) {
+    console.warn(
+      'parseeDateStringToLocal: formato de fecha inválido:',
+      dateString
+    )
+    return null
+  }
+
+  // Crear fecha local usando el constructor con parámetros separados
+  return new Date(year, month - 1, day) // month es 0-indexed en JavaScript
+}
+
+/**
+ * Obtiene la fecha actual en formato YYYY-MM-DD
+ * @returns {string} - Fecha actual en formato YYYY-MM-DD
+ */
+export const getTodayDateString = () => {
+  return formatDateSafe(new Date())
+}
+
+/**
+ * Compara dos fechas ignorando la hora
+ * @param {Date} date1 - Primera fecha
+ * @param {Date} date2 - Segunda fecha
+ * @returns {boolean} - true si las fechas son el mismo día
+ */
+export const isSameDay = (date1, date2) => {
+  if (!date1 || !date2) return false
+
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  )
+}

@@ -1,24 +1,73 @@
-import * as React from "react"
+import React from 'react'
+import { componentClasses, designTokens } from '../../lib/designTokens'
 
-import { cn } from "@/lib/utils"
-
-function Input({
-  className,
-  type,
+export function Input({
+  label,
+  error,
+  success,
+  helperText,
+  className = '',
   ...props
 }) {
+  const getInputClass = () => {
+    if (error) return componentClasses.inputError
+    if (success) return componentClasses.inputSuccess
+    return componentClasses.input
+  }
+
+  const inputId = props.id || props.name
+
   return (
-    <input
-      type={type}
-      data-slot="input"
-      className={cn(
-        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-        className
+    <div className='w-full'>
+      {label && (
+        <label htmlFor={inputId} className={componentClasses.label}>
+          {label}
+          {success && (
+            <span className={`ml-2 text-sm ${designTokens.text.success}`}>
+              ✓ {typeof success === 'string' ? success : 'Válido'}
+            </span>
+          )}
+          {error && (
+            <span className={`ml-2 text-sm ${designTokens.text.error}`}>
+              ✗ Error
+            </span>
+          )}
+        </label>
       )}
-      {...props} />
-  );
+
+      <input
+        id={inputId}
+        className={`${getInputClass()} ${className}`}
+        {...props}
+      />
+
+      {error && (
+        <p className={`mt-1 text-sm ${designTokens.text.error}`}>{error}</p>
+      )}
+
+      {success && typeof success === 'string' && (
+        <p className={`mt-1 text-sm ${designTokens.text.success}`}>
+          ✓ {success}
+        </p>
+      )}
+
+      {helperText && !error && !success && (
+        <p className={`mt-1 text-xs ${designTokens.text.muted}`}>
+          {helperText}
+        </p>
+      )}
+    </div>
+  )
 }
 
-export { Input }
+export function Label({ children, htmlFor, className = '', ...props }) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className={`${componentClasses.label} ${className}`}
+      {...props}
+    >
+      {children}
+    </label>
+  )
+}

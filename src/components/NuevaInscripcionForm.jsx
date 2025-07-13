@@ -1,5 +1,25 @@
 import { useEffect, useState, useRef } from 'react'
 import { db, supabase } from '../lib/supabase'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from './ui/dialog'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { designTokens, componentClasses } from '../lib/designTokens'
+import {
+  UserPlus,
+  Search,
+  Package,
+  User,
+  Clock,
+  Calendar,
+  AlertTriangle
+} from 'lucide-react'
 
 export function NuevaInscripcionForm({
   open,
@@ -186,156 +206,227 @@ export function NuevaInscripcionForm({
 
   const alumnoNoSeleccionado = alumnoSearch && !form.alumno
 
-  if (!open) return null
-
   return (
-    <div
-      className='fixed inset-0 z-50 flex justify-center items-center bg-black/40'
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose()
-        }
-      }}
-    >
-      <div className='bg-white rounded-lg p-8 shadow-lg relative w-full max-w-lg'>
-        <button
-          className='absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none transition-colors duration-200'
-          onClick={onClose}
-          aria-label='Cerrar'
-        >
-          ×
-        </button>
-        <h2 className='text-xl font-bold mb-4'>Nueva inscripción</h2>
-        <form className='flex flex-col gap-4' onSubmit={handleSubmit}>
-          <div className='relative' ref={alumnoInputRef}>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Alumno
-            </label>
-            <input
-              type='text'
-              name='alumno_search'
-              autoComplete='off'
-              value={alumnoSearch}
-              onChange={(e) => {
-                setAlumnoSearch(e.target.value)
-                setShowAlumnoDropdown(true)
-                setForm({ ...form, alumno: '' })
-              }}
-              onFocus={() =>
-                !alumnoPreSeleccionado && setShowAlumnoDropdown(true)
-              }
-              placeholder='Escribe el nombre del alumno...'
-              className={`border p-2 rounded w-full ${
-                alumnoNoSeleccionado ? 'border-red-500' : ''
-              }`}
-              required
-              disabled={!!alumnoPreSeleccionado}
-            />
-            {showAlumnoDropdown &&
-              alumnosFiltrados.length > 0 &&
-              !alumnoPreSeleccionado && (
-                <ul className='absolute z-10 bg-white border rounded w-full mt-1 max-h-48 overflow-y-auto shadow'>
-                  {alumnosFiltrados.map((a) => (
-                    <li
-                      key={a.cedula}
-                      className='px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm'
-                      onClick={() =>
-                        handleAlumnoSelect(a.cedula, a.nombre_completo)
-                      }
-                    >
-                      {a.nombre_completo}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            {alumnoNoSeleccionado && !alumnoPreSeleccionado && (
-              <div className='text-red-500 text-xs mt-1'>
-                Selecciona un alumno de la lista.
-              </div>
-            )}
-          </div>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Paquete
-            </label>
-            <select
-              name='paquete'
-              value={form.paquete}
-              onChange={handleChange}
-              required
-              className='border p-2 rounded w-full'
-            >
-              <option value=''>Selecciona un paquete...</option>
-              {paquetes.map((p) => (
-                <option key={p.codigo} value={p.codigo}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-          {isAcademiaPackage() && (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className='sm:max-w-lg max-h-[90vh] overflow-y-auto'>
+        <DialogHeader>
+          <DialogTitle
+            className={`${designTokens.typography.h3} ${designTokens.text.primary} flex items-center space-x-2`}
+          >
+            <UserPlus className='w-6 h-6 text-blue-600' />
+            <span>Nueva Inscripción</span>
+          </DialogTitle>
+          <DialogDescription className={designTokens.text.secondary}>
+            Inscribe a un alumno en un paquete del club
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className='space-y-6'>
+          {/* Mensajes de estado */}
+          {error && (
+            <div className={componentClasses.errorMessage}>
+              <AlertTriangle className='w-4 h-4 text-red-500 flex-shrink-0' />
+              <span className='text-sm'>{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div className={componentClasses.successMessage}>
+              <span className='text-sm'>{success}</span>
+            </div>
+          )}
+
+          {/* Selección de alumno */}
+          <div className='space-y-4'>
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Horario/Grupo *
-              </label>
+              <Label className={componentClasses.label}>
+                <User className='w-4 h-4 inline mr-2' />
+                Alumno *
+              </Label>
+              <div className='relative' ref={alumnoInputRef}>
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
+                  <Input
+                    type='text'
+                    value={alumnoSearch}
+                    onChange={(e) => {
+                      setAlumnoSearch(e.target.value)
+                      setShowAlumnoDropdown(true)
+                      if (!e.target.value) {
+                        setForm({ ...form, alumno: '' })
+                      }
+                    }}
+                    onFocus={() => setShowAlumnoDropdown(true)}
+                    className={`${componentClasses.input} pl-10 ${
+                      alumnoNoSeleccionado ? 'border-yellow-400' : ''
+                    }`}
+                    placeholder='Buscar alumno...'
+                    required
+                  />
+                </div>
+
+                {showAlumnoDropdown && alumnoSearch && (
+                  <div
+                    className={`absolute z-10 w-full mt-1 ${designTokens.backgrounds.card} ${designTokens.borders.card} ${designTokens.rounded.card} ${designTokens.shadows.card} max-h-48 overflow-y-auto`}
+                  >
+                    {alumnosFiltrados.length > 0 ? (
+                      alumnosFiltrados.map((alumno) => (
+                        <div
+                          key={alumno.cedula}
+                          onClick={() =>
+                            handleAlumnoSelect(
+                              alumno.cedula,
+                              alumno.nombre_completo
+                            )
+                          }
+                          className={`p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${designTokens.transitions.colors} border-b border-gray-100 dark:border-gray-700 last:border-b-0`}
+                        >
+                          <div
+                            className={`font-medium ${designTokens.text.primary}`}
+                          >
+                            {alumno.nombre_completo}
+                          </div>
+                          <div className={`text-sm ${designTokens.text.muted}`}>
+                            Cédula: {alumno.cedula}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div
+                        className={`p-3 ${designTokens.text.muted} text-center`}
+                      >
+                        No se encontraron alumnos
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {alumnoNoSeleccionado && (
+                <p className={`${designTokens.text.warning} text-sm mt-1`}>
+                  Por favor selecciona un alumno de la lista
+                </p>
+              )}
+            </div>
+
+            {/* Paquete */}
+            <div>
+              <Label className={componentClasses.label}>
+                <Package className='w-4 h-4 inline mr-2' />
+                Paquete *
+              </Label>
               <select
-                name='horario'
-                value={form.horario}
+                name='paquete'
+                value={form.paquete}
                 onChange={handleChange}
+                className={componentClasses.input}
                 required
-                className='border p-2 rounded w-full'
               >
-                <option value=''>Selecciona un horario...</option>
-                {horariosGrupos.map((horario) => (
-                  <option key={horario.id_horario} value={horario.id_horario}>
-                    {horario.nombre_horario}
+                <option value=''>Selecciona un paquete</option>
+                {paquetes.map((paquete) => (
+                  <option key={paquete.codigo} value={paquete.codigo}>
+                    {paquete.nombre} - $
+                    {paquete.precio_con_iva || paquete.precio}
                   </option>
                 ))}
               </select>
             </div>
-          )}
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Fecha de inicio
-            </label>
-            <input
-              type='date'
-              name='fecha'
-              value={form.fecha}
-              onChange={handleChange}
-              required
-              className='border p-2 rounded w-full'
-            />
+
+            {/* Fecha de inscripción */}
+            <div>
+              <Label className={componentClasses.label}>
+                <Calendar className='w-4 h-4 inline mr-2' />
+                Fecha de inscripción *
+              </Label>
+              <Input
+                type='date'
+                name='fecha'
+                value={form.fecha}
+                onChange={handleChange}
+                className={componentClasses.input}
+                required
+              />
+            </div>
+
+            {/* Profesor */}
+            <div>
+              <Label className={componentClasses.label}>
+                <User className='w-4 h-4 inline mr-2' />
+                Profesor (opcional)
+              </Label>
+              <select
+                name='profesor'
+                value={form.profesor}
+                onChange={handleChange}
+                className={componentClasses.input}
+              >
+                <option value=''>Selecciona un profesor</option>
+                {profesores.map((profesor) => (
+                  <option
+                    key={profesor.id_profesor}
+                    value={profesor.id_profesor}
+                  >
+                    {profesor.nombre_completo}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Horario (solo para academia) */}
+            {isAcademiaPackage() && (
+              <div>
+                <Label className={componentClasses.label}>
+                  <Clock className='w-4 h-4 inline mr-2' />
+                  Horario *
+                </Label>
+                <select
+                  name='horario'
+                  value={form.horario}
+                  onChange={handleChange}
+                  className={componentClasses.input}
+                  required
+                >
+                  <option value=''>Selecciona un horario</option>
+                  {horariosGrupos.map((horario) => (
+                    <option key={horario.id} value={horario.id}>
+                      {horario.nombre_horario}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Profesor (opcional)
-            </label>
-            <select
-              name='profesor'
-              value={form.profesor || ''}
-              onChange={handleChange}
-              className='border p-2 rounded w-full'
+
+          {/* Botones */}
+          <div className='flex gap-3 pt-4'>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={onClose}
+              className='flex-1'
             >
-              <option value=''>Sin asignar</option>
-              {profesores.map((p) => (
-                <option key={p.id_profesor} value={p.id_profesor}>
-                  {p.nombre_completo}
-                </option>
-              ))}
-            </select>
+              Cancelar
+            </Button>
+            <Button
+              type='submit'
+              disabled={loading || alumnoNoSeleccionado}
+              className={`flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white`}
+            >
+              {loading ? (
+                <>
+                  <div className={componentClasses.spinner} />
+                  Creando...
+                </>
+              ) : (
+                <>
+                  <UserPlus className='w-4 h-4 mr-2' />
+                  Crear Inscripción
+                </>
+              )}
+            </Button>
           </div>
-          {error && <div className='text-red-500 text-sm'>{error}</div>}
-          {success && <div className='text-green-600 text-sm'>{success}</div>}
-          <button
-            type='submit'
-            className='bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow mt-2 disabled:opacity-50'
-            disabled={loading || !form.alumno}
-          >
-            {loading ? 'Guardando...' : 'Crear inscripción'}
-          </button>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

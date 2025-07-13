@@ -16,6 +16,7 @@ import {
 import { supabase, db } from '../../lib/supabase'
 import { ComprobanteLink } from '../../components/ComprobanteLink'
 import { uploadFile, deleteFile } from '../../lib/storage'
+import { formatDateSafe } from '../../lib/utils'
 // Shadcn/ui components
 import { Button } from '@/components/ui/button'
 import {
@@ -54,7 +55,7 @@ export function Pagos() {
     paquete: '',
     monto: '',
     metodoPago: '',
-    fechaPago: new Date().toISOString().split('T')[0],
+    fechaPago: formatDateSafe(new Date()),
     notas: ''
   })
   const [searchAlumno, setSearchAlumno] = useState('')
@@ -84,23 +85,52 @@ export function Pagos() {
     async function fetchAll() {
       setLoading(true)
       try {
-        const [
-          { data: insc, error: err1 },
-          { data: als, error: err2 },
-          { data: pqs, error: err3 }
-        ] = await Promise.all([
+        console.log('🔄 Loading payments data...')
+
+        // 🚀 Timeout aumentado significativamente (de 15s a 45s) porque carga múltiples tablas
+        const dataPromise = Promise.all([
           supabase.from('inscripciones').select('*'),
           db.getAlumnos(),
           db.getPaquetes()
         ])
-        if (err1 || err2 || err3) throw err1 || err2 || err3
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Timeout al cargar datos de pagos')),
+            45000
+          )
+        )
+
+        const [
+          { data: insc, error: err1 },
+          { data: als, error: err2 },
+          { data: pqs, error: err3 }
+        ] = await Promise.race([dataPromise, timeoutPromise])
+
+        if (err1 || err2 || err3) {
+          const error = err1 || err2 || err3
+          console.error('Error loading payments data:', error)
+          throw error
+        }
+
         setInscripciones(insc || [])
         setAlumnos(als || [])
         setPaquetes(pqs || [])
         setError(null)
+        console.log('✅ Payments data loaded successfully')
       } catch (err) {
-        setError('Error al cargar inscripciones')
+        console.error('❌ Error al cargar inscripciones:', err)
+
+        // 🚀 Mensaje de error más informativo
+        if (err.message.includes('Timeout')) {
+          setError(
+            'La carga de datos de pagos está tardando más de lo esperado. Verifica tu conexión a internet o intenta recargar la página.'
+          )
+        } else {
+          setError('Error al cargar inscripciones: ' + err.message)
+        }
       } finally {
+        // 🔧 Siempre terminar loading
         setLoading(false)
       }
     }
@@ -343,7 +373,7 @@ export function Pagos() {
         paquete: '',
         monto: '',
         metodoPago: '',
-        fechaPago: new Date().toISOString().split('T')[0],
+        fechaPago: formatDateSafe(new Date()),
         notas: ''
       })
       setSearchAlumno('')
@@ -387,7 +417,7 @@ export function Pagos() {
       paquete: '',
       monto: '',
       metodoPago: '',
-      fechaPago: new Date().toISOString().split('T')[0],
+      fechaPago: formatDateSafe(new Date()),
       notas: ''
     })
     setSearchAlumno('')
@@ -446,65 +476,65 @@ export function Pagos() {
   }
 
   return (
-    <div className='space-y-8 p-6 bg-gray-50'>
+    <div className='space-y-4 p-3 lg:p-4 bg-gray-50'>
       {/* Header */}
-      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
         <div>
-          <h1 className='text-3xl font-extrabold text-gray-900 tracking-tight'>
+          <h1 className='text-2xl font-extrabold text-gray-900 tracking-tight'>
             Pagos
           </h1>
-          <p className='text-gray-500 mt-1 text-base'>
+          <p className='text-gray-500 mt-1 text-sm'>
             Gestiona los pagos e inscripciones del club
           </p>
         </div>
-        <Button onClick={() => setShowNuevoPagoModal(true)} className='h-10'>
+        <Button onClick={() => setShowNuevoPagoModal(true)} className='h-9'>
           <DollarSign className='w-4 h-4' />
           Nuevo Pago
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className='grid grid-cols-1 md:grid-cols-4 gap-6'>
-        <div className='bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
+      <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+        <div className='bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
           <div className='flex items-center justify-between'>
             <span className='text-sm font-medium text-gray-600'>
               Total Inscripciones
             </span>
-            <FileText className='h-5 w-5 text-blue-600' />
+            <FileText className='h-4 w-4 text-blue-600' />
           </div>
-          <div className='text-3xl font-bold text-gray-900'>
+          <div className='text-xl font-bold text-gray-900'>
             {totalInscripciones}
           </div>
           <p className='text-xs text-gray-400 mt-1'>
             Registradas en el sistema
           </p>
         </div>
-        <div className='bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
+        <div className='bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
           <div className='flex items-center justify-between'>
             <span className='text-sm font-medium text-gray-600'>Pagadas</span>
-            <DollarSign className='h-5 w-5 text-green-600' />
+            <DollarSign className='h-4 w-4 text-green-600' />
           </div>
-          <div className='text-3xl font-bold text-gray-900'>{pagadas}</div>
+          <div className='text-xl font-bold text-gray-900'>{pagadas}</div>
           <p className='text-xs text-gray-400 mt-1'>Completadas</p>
         </div>
-        <div className='bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
+        <div className='bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
           <div className='flex items-center justify-between'>
             <span className='text-sm font-medium text-gray-600'>
               Pendientes
             </span>
-            <CreditCard className='h-5 w-5 text-red-600' />
+            <CreditCard className='h-4 w-4 text-red-600' />
           </div>
-          <div className='text-3xl font-bold text-gray-900'>{pendientes}</div>
+          <div className='text-xl font-bold text-gray-900'>{pendientes}</div>
           <p className='text-xs text-gray-400 mt-1'>Por procesar</p>
         </div>
-        <div className='bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
+        <div className='bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-1 shadow-sm hover:shadow-md transition-shadow'>
           <div className='flex items-center justify-between'>
             <span className='text-sm font-medium text-gray-600'>
               Ingresos Totales
             </span>
-            <DollarSign className='h-5 w-5 text-green-600' />
+            <DollarSign className='h-4 w-4 text-green-600' />
           </div>
-          <div className='text-3xl font-bold text-gray-900'>
+          <div className='text-xl font-bold text-gray-900'>
             ${totalIngresos.toLocaleString()}
           </div>
           <p className='text-xs text-gray-400 mt-1'>Recaudado</p>
@@ -512,8 +542,8 @@ export function Pagos() {
       </div>
 
       {/* Filtros y búsqueda */}
-      <div className='bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
-        <h2 className='text-lg font-semibold text-gray-900 mb-2 md:mb-0'>
+      <div className='bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3'>
+        <h2 className='text-base font-semibold text-gray-900 mb-2 md:mb-0'>
           Lista de Pagos
         </h2>
         <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto justify-end ml-auto'>
