@@ -422,7 +422,11 @@ export function Register() {
   }
 
   return (
-    <div className={componentClasses.pageContainer}>
+    <div
+      className={
+        componentClasses.pageContainer + ' min-h-screen overflow-y-auto'
+      }
+    >
       <div className={componentClasses.twoColumnGrid}>
         {/* Left Column - Branding */}
         <div className='hidden lg:flex lg:items-center lg:justify-center lg:px-12'>

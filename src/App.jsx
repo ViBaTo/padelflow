@@ -157,7 +157,7 @@ function App() {
         </Routes>
 
         {/* Panel de debug solo en desarrollo */}
-        <DebugPanel />
+        {/* <DebugPanel /> */}
       </BrowserRouter>
     </div>
   )
